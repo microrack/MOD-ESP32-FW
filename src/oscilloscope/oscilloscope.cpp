@@ -1,11 +1,47 @@
 #include "oscilloscope.h"
+#include <math.h>
+
+void OscilloscopeRoot::initSineBuffer() {
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        // Generate sine wave values scaled to range -32 to +32
+        float angle = (float)i / BUFFER_SIZE * 2.0 * PI;
+        sine_buffer[i] = (int8_t)(sin(angle) * 32.0);
+    }
+}
+
+void OscilloscopeRoot::drawGraph() {
+    const int height = display->height();
+    const int width = display->width();
+    const int midY = height / 2;
+    
+    // Draw dotted line at the middle (y = 0)
+    for (int x = 0; x < width; x += 4) {
+        display->drawPixel(x, midY, SSD1306_WHITE);
+    }
+    
+    // Draw the graph
+    for (int x = 0; x < min((int)BUFFER_SIZE, width); x++) {
+        // Convert the sine value to display coordinates
+        // Map from -32...32 to screen height with middle point as zero
+        int y = midY - sine_buffer[x] * (height / 2) / 32;
+        
+        // Ensure y is within display bounds
+        y = constrain(y, 0, height - 1);
+        
+        // Draw the point with the specified width
+        for (int w = 0; w < GRAPH_TRACE_WIDTH; w++) {
+            int drawY = y - (GRAPH_TRACE_WIDTH / 2) + w;
+            if (drawY >= 0 && drawY < height) {
+                display->drawPixel(x, drawY, SSD1306_WHITE);
+            }
+        }
+    }
+}
 
 void OscilloscopeRoot::enter() {
     display->clearDisplay();
-    display->setTextSize(1);
-    display->setTextColor(SSD1306_WHITE);
-    display->setCursor(0,0);
-    display->println(F("Oscilloscope Mode"));
+    initSineBuffer();
+    drawGraph();
     display->display();
 }
 
@@ -16,6 +52,12 @@ void OscilloscopeRoot::exit() {
 
 void OscilloscopeRoot::update(Event* event) {
     if (event == nullptr) return;
+
+    // Clear the display for redrawing
+    display->clearDisplay();
+    
+    // Draw the graph on each update
+    drawGraph();
 
     // Handle encoder changes
     if (event->encoder != 0) {
