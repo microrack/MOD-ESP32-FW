@@ -19,6 +19,15 @@ void OscilloscopeRoot::drawGraph() {
         display->drawPixel(x, midY, SSD1306_WHITE);
     }
     
+    // Draw tick marks on the x-axis every 32 pixels
+    const int TICK_SPACING = 32;
+    const int TICK_SIZE = 6; // 6 pixels tall (3 above, 3 below)
+    for (int x = 0; x < width; x += TICK_SPACING) {
+        for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
+            display->drawPixel(x, y, SSD1306_WHITE);
+        }
+    }
+    
     // Draw the graph
     for (int x = 0; x < min((int)BUFFER_SIZE, width); x++) {
         // Convert the sine value to display coordinates
