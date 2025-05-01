@@ -29,6 +29,10 @@ ScreenSwitcher screen_switcher(screens, screen_count);
 // NeoPixel setup
 Adafruit_NeoPixel pixels(1, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
+// Button state tracking for screen switching
+bool button_a_was_released = true;
+bool screen_switched = false;
+
 void setup() {
     // Initialize serial
     Serial.begin(115200);
@@ -57,9 +61,15 @@ void loop() {
     // Get input events
     Event event = input_handler.get_inputs();
 
-    // Handle screen switching
-    if (event.button_a == ButtonPress) {
+    // Handle screen switching with a state machine approach
+    if (event.button_a == ButtonRelease) {
+        button_a_was_released = true;
+        screen_switched = false;
+    } else if (event.button_a == ButtonHold && event.button_a_ms > 500 && button_a_was_released && !screen_switched) {
+        // Switch screen only if the button was released before and hasn't switched screens in this hold session
         screen_switcher.set_screen(screen_switcher.get_next());
+        screen_switched = true;
+        button_a_was_released = false;
     }
 
     // Update current screen
