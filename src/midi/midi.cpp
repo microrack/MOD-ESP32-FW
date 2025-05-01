@@ -1,4 +1,8 @@
 #include "midi.h"
+#include <MIDI.h>
+
+// MIDI interface
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
 void MidiRoot::enter() {
     display->clearDisplay();
@@ -49,14 +53,12 @@ void MidiRoot::update(Event* event) {
     display->display();
 }
 
-void MidiRoot::handle_note_on(byte channel, byte note, byte velocity) {
-    // Handle MIDI note on event
-}
+// Constructor - Corrected definition
+MidiRoot::MidiRoot(Display* display) : ScreenInterface(display) {
+    Serial2.begin(31250, SERIAL_8N1, 16, 17); // MIDI baud rate, Tx=17, Rx=16 for Serial2 on ESP32
 
-void MidiRoot::handle_note_off(byte channel, byte note, byte velocity) {
-    // Handle MIDI note off event
+    // Initialize MIDI
+    MIDI.begin(MIDI_CHANNEL_OMNI);
+    // Add handlers if needed (e.g., MIDI.setHandleNoteOn(...))
+    // MIDI.setHandleNoteOn(MidiRoot::handle_note_on); // Example: Need to define this static handler
 }
-
-void MidiRoot::handle_control_change(byte channel, byte number, byte value) {
-    // Handle MIDI control change event
-} 

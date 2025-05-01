@@ -1,5 +1,6 @@
 #include "input.h"
 
+
 Input::Input() {
     // Initialize encoder
     encoder.attachHalfQuad(ENCODER_A, ENCODER_B);

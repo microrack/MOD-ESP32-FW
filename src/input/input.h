@@ -7,6 +7,7 @@ class Input {
 public:
     Input();
     Event get_inputs();
+    void begin();
 
 private:
     ESP32Encoder encoder;
