@@ -9,6 +9,7 @@
 #include "input/input.h"
 #include "oscilloscope/oscilloscope.h"
 #include "midi/midi.h"
+#include "screen_switcher.h"
 
 // Create display object
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -20,8 +21,10 @@ Input input_handler;
 OscilloscopeRoot oscilloscope_screen(&display);
 MidiRoot midi_screen(&display);
 
-// Current screen pointer
-ScreenInterface* current_screen = &midi_screen;
+// Create screen array and switcher
+ScreenInterface* screens[] = {&midi_screen, &oscilloscope_screen};
+const size_t screen_count = sizeof(screens) / sizeof(screens[0]);
+ScreenSwitcher screen_switcher(screens, screen_count);
 
 // NeoPixel setup
 Adafruit_NeoPixel pixels(1, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -46,9 +49,8 @@ void setup() {
     pixels.setBrightness(50);
     pixels.setPixelColor(0, pixels.Color(0, 0, 255));
     pixels.show();
-    
-    // Set initial screen
-    current_screen->enter();
+
+    screen_switcher.set_screen(0);
 }
 
 void loop() {
@@ -57,19 +59,11 @@ void loop() {
 
     // Handle screen switching
     if (event.button_a == ButtonPress) {
-        if (current_screen == &oscilloscope_screen) {
-            current_screen->exit();
-            current_screen = &midi_screen;
-            current_screen->enter();
-        } else {
-            current_screen->exit();
-            current_screen = &oscilloscope_screen;
-            current_screen->enter();
-        }
+        screen_switcher.set_screen(screen_switcher.get_next());
     }
 
     // Update current screen
-    current_screen->update(&event);
+    screen_switcher.update(&event);
 
     Event::print(event);
 } 
