@@ -1,11 +1,17 @@
 #include "midi.h"
 
 void MidiRoot::enter() {
-    // Initialize MIDI screen
+    display->clearDisplay();
+    display->setTextSize(1);
+    display->setTextColor(SSD1306_WHITE);
+    display->setCursor(0,0);
+    display->println(F("MIDI Mode"));
+    display->display();
 }
 
 void MidiRoot::exit() {
-    // Cleanup MIDI screen
+    display->clearDisplay();
+    display->display();
 }
 
 void MidiRoot::update(Event* event) {
@@ -38,4 +44,19 @@ void MidiRoot::update(Event* event) {
         default:
             break;
     }
+
+    // Handle events and update display as needed
+    display->display();
+}
+
+void MidiRoot::handle_note_on(byte channel, byte note, byte velocity) {
+    // Handle MIDI note on event
+}
+
+void MidiRoot::handle_note_off(byte channel, byte note, byte velocity) {
+    // Handle MIDI note off event
+}
+
+void MidiRoot::handle_control_change(byte channel, byte number, byte value) {
+    // Handle MIDI control change event
 } 
