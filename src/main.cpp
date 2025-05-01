@@ -22,13 +22,17 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 // Pin definitions
 const int BUTTON_A = 38;
 const int ENCODER_SW = 39;
-const int PWM_0 = 33;
-const int PWM_1 = 25;
-const int PWM_2 = 26;
+const int PWM_0_PIN = 33;
+const int PWM_1_PIN = 25;
+const int PWM_2_PIN = 26;
 const int ADC_0 = 36;
 const int ADC_1 = 37;
 const int SYNC_IN = 18;
 const int SYNC_OUT = 19;
+
+const int PWM_0 = 0;
+const int PWM_1 = 1;
+const int PWM_2 = 2;
 
 // PWM parameters
 const uint32_t PWM_FREQ = 16000;
@@ -87,12 +91,12 @@ void setup() {
     pinMode(SYNC_OUT, OUTPUT);
 
     // Configure PWM channels
-    ledcSetup(0, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttachPin(PWM_0, 0);
-    ledcSetup(1, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttachPin(PWM_1, 1);
-    ledcSetup(2, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttachPin(PWM_2, 2);
+    ledcSetup(PWM_0, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttachPin(PWM_0_PIN, PWM_0);
+    ledcSetup(PWM_1, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttachPin(PWM_1_PIN, PWM_1);
+    ledcSetup(PWM_2, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttachPin(PWM_2_PIN, PWM_2);
 
     // Initialize random seed
     randomSeed(analogRead(0));
@@ -123,11 +127,12 @@ void setup() {
 void loop() {
     MIDI.read();
 
-    ledcWrite(PWM_0, 0);
-    ledcWrite(PWM_1, 0);
-    ledcWrite(PWM_2, 0);
-    delay(100);
     ledcWrite(PWM_0, PWM_MAX_VAL);
     ledcWrite(PWM_1, PWM_MAX_VAL);
     ledcWrite(PWM_2, PWM_MAX_VAL);
+    delay(100);
+    ledcWrite(PWM_0, 0);
+    ledcWrite(PWM_1, 0);
+    ledcWrite(PWM_2, 0);
+    delay(1000);
 } 
