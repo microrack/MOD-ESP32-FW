@@ -8,6 +8,9 @@
 #include <ESP32Encoder.h>
 #include <Adafruit_NeoPixel.h>
 #include <MIDI.h>
+#include "oscilloscope/oscilloscope.h"
+#include "midi/midi.h"
+#include "input/input.h"
 
 // Create a 'MIDI' object using MySettings bound to Serial2.
 MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial2, MIDI, midi::DefaultSerialSettings);
@@ -17,7 +20,11 @@ MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, Serial2, MIDI, midi::DefaultSerialSe
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Display display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+OscilloscopeRoot oscilloscope_screen(&display);
+MidiRoot midi_screen(&display);
+Input input;
 
 // Pin definitions
 const int BUTTON_A = 38;
@@ -127,6 +134,16 @@ void setup() {
 void loop() {
     MIDI.read();
 
+    // Get input events
+    Event event = input.get_inputs();
+
+    // Print events if they exist
+    Event::print(event);
+
+    // Update current screen with events
+    oscilloscope_screen.update(&event);
+
+    /*
     ledcWrite(PWM_0, PWM_MAX_VAL);
     ledcWrite(PWM_1, PWM_MAX_VAL);
     ledcWrite(PWM_2, PWM_MAX_VAL);
@@ -135,4 +152,5 @@ void loop() {
     ledcWrite(PWM_1, PWM_MAX_VAL / 2);
     ledcWrite(PWM_2, PWM_MAX_VAL / 2);
     delay(1000);
+    */
 } 
