@@ -4,6 +4,23 @@
 // MIDI interface
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
+MidiRoot::MidiRoot(Display* display) 
+    : ScreenInterface(display),
+      midi_info(display),
+      midi_settings(display) {
+    
+    // Initialize MIDI screens array
+    midi_screens[0] = &midi_info;
+    midi_screens[1] = &midi_settings;
+    
+    // Initialize screen switcher with the screens array
+    screen_switcher = ScreenSwitcher(midi_screens, 2);
+    
+    // Initialize MIDI
+    Serial2.begin(31250, SERIAL_8N1, 16, 17); // MIDI baud rate, Tx=17, Rx=16 for Serial2 on ESP32
+    MIDI.begin(MIDI_CHANNEL_OMNI);
+}
+
 void MidiRoot::enter() {
     display->clearDisplay();
     display->setTextSize(1);
@@ -11,9 +28,15 @@ void MidiRoot::enter() {
     display->setCursor(0,0);
     display->println(F("MIDI Mode"));
     display->display();
+    
+    // Start with the info screen
+    screen_switcher.set_screen(0);
 }
 
 void MidiRoot::exit() {
+    // Make sure to exit the current sub-screen
+    screen_switcher.get_current_screen()->exit();
+    
     display->clearDisplay();
     display->display();
 }
@@ -23,42 +46,19 @@ void MidiRoot::update(Event* event) {
 
     // Handle encoder changes
     if (event->encoder != 0) {
-        // Process encoder movement
+        // Pass to current screen
     }
 
-    // Handle button events
-    switch (event->button_a) {
-        case ButtonPress:
-            // Handle button A press
-            break;
-        case ButtonRelease:
-            // Handle button A release
-            break;
-        default:
-            break;
-    }
-
+    // Handle button events - specifically switch screens on button_sw press
     switch (event->button_sw) {
         case ButtonPress:
-            // Handle encoder switch press
-            break;
-        case ButtonRelease:
-            // Handle encoder switch release
+            // Switch to next MIDI screen
+            screen_switcher.set_screen(screen_switcher.get_next());
             break;
         default:
             break;
     }
-
-    // Handle events and update display as needed
-    display->display();
-}
-
-// Constructor - Corrected definition
-MidiRoot::MidiRoot(Display* display) : ScreenInterface(display) {
-    Serial2.begin(31250, SERIAL_8N1, 16, 17); // MIDI baud rate, Tx=17, Rx=16 for Serial2 on ESP32
-
-    // Initialize MIDI
-    MIDI.begin(MIDI_CHANNEL_OMNI);
-    // Add handlers if needed (e.g., MIDI.setHandleNoteOn(...))
-    // MIDI.setHandleNoteOn(MidiRoot::handle_note_on); // Example: Need to define this static handler
+    
+    // Update the current sub-screen with the event
+    screen_switcher.update(event);
 }

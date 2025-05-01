@@ -4,6 +4,9 @@
 
 class ScreenSwitcher {
 public:
+    // Default constructor
+    ScreenSwitcher();
+    
     ScreenSwitcher(ScreenInterface** screens, size_t screen_count);
     
     // Get the current screen index
