@@ -1,11 +1,17 @@
 #include "oscilloscope.h"
 
 void OscilloscopeRoot::enter() {
-    // Initialize oscilloscope screen
+    display->clearDisplay();
+    display->setTextSize(1);
+    display->setTextColor(SSD1306_WHITE);
+    display->setCursor(0,0);
+    display->println(F("Oscilloscope Mode"));
+    display->display();
 }
 
 void OscilloscopeRoot::exit() {
-    // Cleanup oscilloscope screen
+    display->clearDisplay();
+    display->display();
 }
 
 void OscilloscopeRoot::update(Event* event) {
@@ -38,4 +44,7 @@ void OscilloscopeRoot::update(Event* event) {
         default:
             break;
     }
+    
+    // Update display after handling events
+    display->display();
 } 
