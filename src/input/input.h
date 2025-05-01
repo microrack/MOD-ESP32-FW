@@ -1,7 +1,26 @@
 #pragma once
 
-#include "../urack_types.h"
+#include <stdint.h>
+#include <Arduino.h>
 #include <ESP32Encoder.h>
+
+typedef enum {
+    ButtonNone,
+    ButtonPress,
+    ButtonRelease,
+    ButtonHold,
+    ButtonSize
+} Button;
+
+typedef struct Event {
+    int8_t encoder;    // Encoder value
+    Button button_a;   // Button A state
+    Button button_sw;  // Encoder switch state
+    uint32_t button_a_ms; // Time in ms for Button A
+    uint32_t button_sw_ms; // Time in ms for Encoder switch
+
+    static void print(const Event& event);
+} Event;
 
 class Input {
 public:
