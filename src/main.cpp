@@ -35,8 +35,8 @@ const int PWM_1 = 1;
 const int PWM_2 = 2;
 
 // PWM parameters
-const uint32_t PWM_FREQ = 16000;
-const uint8_t  PWM_RESOLUTION = 12;
+const uint32_t PWM_FREQ = 78125;
+const uint8_t  PWM_RESOLUTION = 10;
 const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
 
 // NeoPixel configuration
@@ -131,8 +131,8 @@ void loop() {
     ledcWrite(PWM_1, PWM_MAX_VAL);
     ledcWrite(PWM_2, PWM_MAX_VAL);
     delay(100);
-    ledcWrite(PWM_0, 0);
-    ledcWrite(PWM_1, 0);
-    ledcWrite(PWM_2, 0);
+    ledcWrite(PWM_0, PWM_MAX_VAL / 2);
+    ledcWrite(PWM_1, PWM_MAX_VAL / 2);
+    ledcWrite(PWM_2, PWM_MAX_VAL / 2);
     delay(1000);
 } 
