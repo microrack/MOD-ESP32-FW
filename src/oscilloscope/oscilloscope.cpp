@@ -1,10 +1,36 @@
 #include "oscilloscope.h"
 #include <math.h>
 
+// Initialize static members
+volatile bool OscilloscopeRoot::adc_conversion_done = false;
+OscilloscopeRoot* OscilloscopeRoot::instance = nullptr;
+
+// ISR Callback function for ADC Continuous - Keeping this but not relying on it
+void ARDUINO_ISR_ATTR OscilloscopeRoot::adcCompleteCallback() {
+    // Set flag for debugging
+    adc_conversion_done = true;
+    
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    if (instance && instance->adcCompleteSemaphore) {
+        xSemaphoreGiveFromISR(instance->adcCompleteSemaphore, &xHigherPriorityTaskWoken);
+    }
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
 OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) {
+    // Store instance for callback
+    instance = this;
+    
     // Create synchronization primitives
     acquisitionSemaphore = xSemaphoreCreateBinary();
+    adcCompleteSemaphore = xSemaphoreCreateBinary();
     bufferMutex = xSemaphoreCreateMutex();
+    
+    // Initialize buffer with zeros
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        signal_buffer[i] = 0;
+        adc_readings[i] = 0;
+    }
     
     // Initialize ADC
     setupADC();
@@ -32,29 +58,51 @@ void OscilloscopeRoot::adcTaskFunction(void* pvParameters) {
             break;
         }
         
+        // Configure ADC Continuous mode for 16 samples per acquisition
+        uint8_t pins[] = {self->adc_pin};
+        bool configResult = analogContinuous(pins, 1, 16, self->sampling_freq_hz, NULL);
+        
+        if (!configResult) {
+            continue;
+        }
+        
+        // Start ADC conversions
+        bool startResult = analogContinuousStart();
+        
+        if (!startResult) {
+            continue;
+        }
+        
         // Keep sampling while isRunning is true
         while (self->isRunning) {
-            // Read from ADC
-            uint32_t adc_reading = adc1_get_raw(self->adc_channel);
+            // Poll for ADC data instead of waiting for callback
+            adc_continuous_data_t* result = NULL;
             
-            // Take mutex before modifying the buffer
-            if (xSemaphoreTake(self->bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
-                // Store raw reading
-                self->adc_readings[self->adc_read_index] = adc_reading;
-                
-                // Scale reading to range -32 to 32 for display
-                self->signal_buffer[self->adc_read_index] = map(adc_reading, 0, 4095, -32, 32);
-                
-                // Move to next position in circular buffer
-                self->adc_read_index = (self->adc_read_index + 1) % BUFFER_SIZE;
-                
-                // Release mutex
-                xSemaphoreGive(self->bufferMutex);
+            // Try to read data (blocking call)
+            if (analogContinuousRead(&result, 100)) {
+                // Take mutex before modifying the buffer
+                if (xSemaphoreTake(self->bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
+                    // Store raw reading
+                    self->adc_readings[self->adc_read_index] = result[0].avg_read_raw;
+                    
+                    // Scale reading to range -32 to 32 for display
+                    self->signal_buffer[self->adc_read_index] = map(result[0].avg_read_raw, 0, 4095, -32, 32);
+                    
+                    // Move to next position in circular buffer
+                    self->adc_read_index = (self->adc_read_index + 1) % BUFFER_SIZE;
+                    
+                    // Release mutex
+                    xSemaphoreGive(self->bufferMutex);
+                }
             }
             
-            // Delay for the appropriate sample interval
-            vTaskDelay(pdMS_TO_TICKS(self->sample_interval_ms));
+            // Add a small delay to control the polling rate
+            vTaskDelay(pdMS_TO_TICKS(10));
         }
+        
+        // Stop and deinitialize ADC when exiting the loop
+        analogContinuousStop();
+        analogContinuousDeinit();
     }
     
     // Task will delete itself
@@ -62,34 +110,29 @@ void OscilloscopeRoot::adcTaskFunction(void* pvParameters) {
 }
 
 void OscilloscopeRoot::setupADC() {
-    // Configure ADC
-    adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(adc_channel, ADC_ATTEN_DB_12);
+    // Set the ADC resolution
+    analogReadResolution(12);
     
-    // Characterize ADC
-    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_12, ADC_WIDTH_BIT_12, 1100, &adc_chars);
+    // Set the attenuation to allow for a wider input voltage range
+    analogSetPinAttenuation(adc_pin, ADC_11db);
     
-    // Initialize buffer with zeros
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        signal_buffer[i] = 0;
-        adc_readings[i] = 0;
-    }
-    
-    adc_read_index = 0;
-    updateSampleInterval();
+    // Default sampling frequency based on time scale
+    updateSampleRate();
 }
 
-void OscilloscopeRoot::updateSampleInterval() {
-    // With proper task delay, we can directly set the interval based on the time scale
-    // A reasonable sampling rate would be about 8 samples per division
-    sample_interval_ms = time_scales[current_scale_index] / 8.0;
+void OscilloscopeRoot::updateSampleRate() {
+    // Calculate sampling frequency based on time scale
+    // We want about 8 samples per division
+    float time_per_division_ms = time_scales[current_scale_index];
     
-    // Ensure we don't have a zero delay (minimum 1ms)
-    if (sample_interval_ms < 1) {
-        sample_interval_ms = 1;
-    }
-
-    Serial.printf("Sample interval: %dms\n", sample_interval_ms);
+    // Convert time per division to frequency
+    // frequency = 1000 / (time_per_division_ms / 8)
+    sampling_freq_hz = 8000 / time_per_division_ms;
+    
+    // ADC Continuous mode requires 20kHz-2MHz sampling rate
+    // Always use minimum 20kHz as required by the hardware
+    if (sampling_freq_hz < 20000) sampling_freq_hz = 20000;
+    if (sampling_freq_hz > 2000000) sampling_freq_hz = 2000000;
     
     // Clear the buffer when scale changes
     if (xSemaphoreTake(bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
@@ -105,11 +148,6 @@ void OscilloscopeRoot::updateSampleInterval() {
         // Release mutex
         xSemaphoreGive(bufferMutex);
     }
-}
-
-void OscilloscopeRoot::readADC() {
-    // This method is no longer needed as ADC reading happens in a separate thread
-    // But we'll keep it for compatibility, it just doesn't do anything anymore
 }
 
 void OscilloscopeRoot::drawGraph() {
@@ -253,12 +291,12 @@ void OscilloscopeRoot::update(Event* event) {
         // Decrease index (faster time scale) when turned clockwise
         if (event->encoder > 0 && current_scale_index > 0) {
             current_scale_index--;
-            updateSampleInterval();
+            updateSampleRate();
         }
         // Increase index (slower time scale) when turned counter-clockwise
         else if (event->encoder < 0 && current_scale_index < TIME_SCALE_COUNT - 1) {
             current_scale_index++;
-            updateSampleInterval();
+            updateSampleRate();
         }
     }
     
