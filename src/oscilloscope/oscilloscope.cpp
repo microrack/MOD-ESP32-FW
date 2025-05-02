@@ -5,7 +5,7 @@
 volatile bool OscilloscopeRoot::adc_conversion_done = false;
 OscilloscopeRoot* OscilloscopeRoot::instance = nullptr;
 
-// ISR Callback function for ADC Continuous - Keeping this but not relying on it
+// ISR Callback function for ADC Continuous
 void ARDUINO_ISR_ATTR OscilloscopeRoot::adcCompleteCallback() {
     // Set flag for debugging
     adc_conversion_done = true;
@@ -60,7 +60,8 @@ void OscilloscopeRoot::adcTaskFunction(void* pvParameters) {
         
         // Configure ADC Continuous mode for 16 samples per acquisition
         uint8_t pins[] = {self->adc_pin};
-        bool configResult = analogContinuous(pins, 1, 16, self->sampling_freq_hz, NULL);
+        // Use the callback and constant sampling frequency of 100kHz
+        bool configResult = analogContinuous(pins, 1, 16, SAMPLING_FREQ_HZ, &adcCompleteCallback);
         
         if (!configResult) {
             continue;
@@ -73,31 +74,70 @@ void OscilloscopeRoot::adcTaskFunction(void* pvParameters) {
             continue;
         }
         
+        // Decimation counter and factor
+        uint16_t decimation_counter = 0;
+        uint16_t decimation_factor = self->getDecimationFactor();
+        uint8_t current_scale = self->current_scale_index;
+        
         // Keep sampling while isRunning is true
         while (self->isRunning) {
-            // Poll for ADC data instead of waiting for callback
-            adc_continuous_data_t* result = NULL;
-            
-            // Try to read data (blocking call)
-            if (analogContinuousRead(&result, 100)) {
-                // Take mutex before modifying the buffer
+            // Check if time scale has changed
+            if (current_scale != self->current_scale_index) {
+                // Update the decimation factor
+                current_scale = self->current_scale_index;
+                decimation_factor = self->getDecimationFactor();
+                
+                // Reset counters and buffer on scale change
                 if (xSemaphoreTake(self->bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
-                    // Store raw reading
-                    self->adc_readings[self->adc_read_index] = result[0].avg_read_raw;
-                    
-                    // Scale reading to range -32 to 32 for display
-                    self->signal_buffer[self->adc_read_index] = map(result[0].avg_read_raw, 0, 4095, -32, 32);
-                    
-                    // Move to next position in circular buffer
-                    self->adc_read_index = (self->adc_read_index + 1) % BUFFER_SIZE;
-                    
-                    // Release mutex
+                    self->adc_read_index = 0;
+                    for (int i = 0; i < BUFFER_SIZE; i++) {
+                        self->signal_buffer[i] = 0;
+                        self->adc_readings[i] = 0;
+                    }
                     xSemaphoreGive(self->bufferMutex);
                 }
+                
+                decimation_counter = 0;
             }
             
-            // Add a small delay to control the polling rate
-            vTaskDelay(pdMS_TO_TICKS(10));
+            // Wait for ADC completion semaphore
+            if (xSemaphoreTake(self->adcCompleteSemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
+                // Poll for ADC data
+                adc_continuous_data_t* result = NULL;
+                
+                // Try to read data
+                if (analogContinuousRead(&result, 0)) {
+                    // Increment decimation counter
+                    decimation_counter++;
+                    
+                    // Only store samples when decimation counter hits the factor
+                    if (decimation_counter >= decimation_factor) {
+                        decimation_counter = 0;
+                        
+                        // Take mutex before modifying the buffer
+                        if (xSemaphoreTake(self->bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
+                            // Store raw reading
+                            self->adc_readings[self->adc_read_index] = result[0].avg_read_raw;
+                            
+                            // Scale reading to range -32 to 32 for display
+                            self->signal_buffer[self->adc_read_index] = map(result[0].avg_read_raw, 0, 4095, -32, 32);
+                            
+                            // Move to next position in circular buffer
+                            self->adc_read_index = (self->adc_read_index + 1) % BUFFER_SIZE;
+                            
+                            // Release mutex
+                            xSemaphoreGive(self->bufferMutex);
+                        }
+                    }
+                }
+            } else {
+                // Timeout occurred, check if we should restart ADC
+                if (self->isRunning) {
+                    // Try to restart ADC
+                    analogContinuousStop();
+                    analogContinuousStart();
+                }
+            }
         }
         
         // Stop and deinitialize ADC when exiting the loop
@@ -116,38 +156,43 @@ void OscilloscopeRoot::setupADC() {
     // Set the attenuation to allow for a wider input voltage range
     analogSetPinAttenuation(adc_pin, ADC_11db);
     
-    // Default sampling frequency based on time scale
-    updateSampleRate();
+    // Initialize buffer with zeros
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        signal_buffer[i] = 0;
+        adc_readings[i] = 0;
+    }
+    adc_read_index = 0;
 }
 
-void OscilloscopeRoot::updateSampleRate() {
-    // Calculate sampling frequency based on time scale
-    // We want about 8 samples per division
-    float time_per_division_ms = time_scales[current_scale_index];
+// Calculate the decimation factor based on the current time scale
+uint16_t OscilloscopeRoot::getDecimationFactor() {
+    // Calculate time per sample in microseconds at 100kHz
+    // 1 / 100000 = 10 microseconds per sample
+    const float us_per_sample = 10.0;
     
-    // Convert time per division to frequency
-    // frequency = 1000 / (time_per_division_ms / 8)
-    sampling_freq_hz = 8000 / time_per_division_ms;
+    // Calculate how many microseconds each division represents
+    float us_per_division = time_scales[current_scale_index] * 1000.0; // convert ms to us
     
-    // ADC Continuous mode requires 20kHz-2MHz sampling rate
-    // Always use minimum 20kHz as required by the hardware
-    if (sampling_freq_hz < 20000) sampling_freq_hz = 20000;
-    if (sampling_freq_hz > 2000000) sampling_freq_hz = 2000000;
+    // Calculate samples per division
+    float samples_per_division = us_per_division / us_per_sample;
     
-    // Clear the buffer when scale changes
-    if (xSemaphoreTake(bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
-        // Reset index and clear buffer
-        adc_read_index = 0;
-        
-        // Initialize buffer with zeros
-        for (int i = 0; i < BUFFER_SIZE; i++) {
-            signal_buffer[i] = 0;
-            adc_readings[i] = 0;
-        }
-        
-        // Release mutex
-        xSemaphoreGive(bufferMutex);
-    }
+    // Assuming we want about 32 pixels per division
+    float target_pixels_per_division = 32.0;
+    
+    // Calculate decimation factor (how many samples to skip)
+    uint16_t decimation = max((uint16_t)(samples_per_division / target_pixels_per_division), (uint16_t)1);
+    
+    return decimation;
+}
+
+// Calculate how many samples should be visible based on current time scale
+uint16_t OscilloscopeRoot::getVisibleSamples() {
+    // Get display width
+    const int width = display->width();
+    
+    // With decimation in acquisition, we're already storing only the samples we need
+    // So visible samples is just the display width, or the buffer size if smaller
+    return min((uint16_t)width, (uint16_t)BUFFER_SIZE);
 }
 
 void OscilloscopeRoot::drawGraph() {
@@ -162,7 +207,7 @@ void OscilloscopeRoot::drawGraph() {
     }
     
     // Get the current read index (protected by mutex)
-    uint8_t current_index = adc_read_index;
+    uint16_t current_index = adc_read_index;
     
     // Release mutex as soon as possible
     xSemaphoreGive(bufferMutex);
@@ -200,16 +245,22 @@ void OscilloscopeRoot::drawGraph() {
         }
     }
     
+    // Calculate decimation factor for display
+    uint16_t decimation = getDecimationFactor();
+    
     // Take mutex again before reading the buffer for drawing the graph
     if (xSemaphoreTake(bufferMutex, 10 / portTICK_PERIOD_MS) != pdTRUE) {
         // If we can't get the mutex, just return
         return;
     }
     
-    // Draw the graph
-    for (int x = 0; x < min((int)BUFFER_SIZE, width); x++) {
+    // Draw the graph using the already decimated data
+    // Since we're decimating during acquisition, each sample in the buffer
+    // corresponds directly to one pixel on screen
+    for (int x = 0; x < min((int)width, (int)BUFFER_SIZE); x++) {
         // Calculate the buffer index for this screen position
-        int idx = (current_index - width + x + BUFFER_SIZE) % BUFFER_SIZE;
+        // Start from the most recent sample and go back in time
+        int idx = (current_index - x - 1 + BUFFER_SIZE) % BUFFER_SIZE;
         
         // Convert the value to display coordinates
         // Map from -32...32 to screen height with middle point as zero
@@ -242,8 +293,11 @@ void OscilloscopeRoot::drawGraph() {
         time_label = String(time_scales[current_scale_index] / 1000.0, 1) + "s/div";
     }
     
+    // Add decimation info to the label
+    String full_label = time_label + " D:" + String(decimation);
+    
     // Draw label with inverted colors (white background, black text)
-    const int LABEL_WIDTH = 58;  // Adjust width as needed
+    const int LABEL_WIDTH = 74;  // Adjusted width for decimation info
     const int LABEL_HEIGHT = 8;  // Standard text height
     const int LABEL_X = 2;       // Left margin
     const int LABEL_Y = 2;       // Top margin
@@ -255,7 +309,7 @@ void OscilloscopeRoot::drawGraph() {
     display->setTextColor(SSD1306_BLACK);
     display->setTextSize(1);
     display->setCursor(LABEL_X + 2, LABEL_Y);
-    display->print(time_label);
+    display->print(full_label);
     
     // Reset text color to white for any future drawing
     display->setTextColor(SSD1306_WHITE);
@@ -291,12 +345,10 @@ void OscilloscopeRoot::update(Event* event) {
         // Decrease index (faster time scale) when turned clockwise
         if (event->encoder > 0 && current_scale_index > 0) {
             current_scale_index--;
-            updateSampleRate();
         }
         // Increase index (slower time scale) when turned counter-clockwise
         else if (event->encoder < 0 && current_scale_index < TIME_SCALE_COUNT - 1) {
             current_scale_index++;
-            updateSampleRate();
         }
     }
     

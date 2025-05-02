@@ -19,7 +19,8 @@ public:
     void update(Event* event) override;
 
 private:
-    static const uint8_t BUFFER_SIZE = 128;
+    // Increase buffer size to 1024 for higher resolution
+    static const uint16_t BUFFER_SIZE = 1024;
     static const uint8_t GRAPH_TRACE_WIDTH = 2; // Width of the graph trace in pixels
     int8_t signal_buffer[BUFFER_SIZE];
     void setupADC();
@@ -29,15 +30,20 @@ private:
     uint8_t adc_pin = 36; // Change to your specific ADC pin
     esp_adc_cal_characteristics_t adc_chars;
     uint16_t adc_readings[BUFFER_SIZE];
-    uint8_t adc_read_index = 0;
+    uint16_t adc_read_index = 0;  // Changed to uint16_t to handle larger buffer
     
     // Timing variables
     // Time scales in milliseconds per division
     static const uint8_t TIME_SCALE_COUNT = 9;
     const float time_scales[TIME_SCALE_COUNT] = {1, 2, 5, 10, 20, 50, 100, 200, 500};
     uint8_t current_scale_index = 4; // Default to 20ms/div
-    uint32_t sampling_freq_hz = 1000; // Initial sampling frequency: 1kHz
-    void updateSampleRate();
+    
+    // Constant sampling frequency 100kHz
+    static const uint32_t SAMPLING_FREQ_HZ = 100000;
+    
+    // Decimation parameters for different time scales
+    uint16_t getDecimationFactor();
+    uint16_t getVisibleSamples();
     
     // ADC Continuous mode with task
     static void ARDUINO_ISR_ATTR adcCompleteCallback();
