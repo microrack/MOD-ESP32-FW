@@ -10,7 +10,7 @@ void MidiSettings::enter() {
     display->setTextColor(SSD1306_WHITE);
     display->setCursor(0,0);
     display->println(F("MIDI Settings"));
-    
+
     display->display();
 }
 
@@ -35,7 +35,7 @@ void MidiSettings::update(Event* event) {
         default:
             break;
     }
-    
+
     // Always update display
     display->display();
-} 
+}

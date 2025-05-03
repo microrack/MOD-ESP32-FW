@@ -18,4 +18,4 @@ private:
     MidiSettings midi_settings;
     ScreenInterface* midi_screens[2];
     ScreenSwitcher screen_switcher;
-}; 
+};

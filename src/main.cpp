@@ -73,4 +73,4 @@ void loop() {
     screen_switcher.update(&event);
 
     Event::print(event);
-} 
+}

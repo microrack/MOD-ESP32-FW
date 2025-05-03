@@ -40,4 +40,4 @@ void MidiInfo::update(Event* event) {
 
     // Update display after handling events
     display->display();
-} 
+}

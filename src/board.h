@@ -30,4 +30,4 @@ const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
 // PWM channels
 const int PWM_0 = 0;
 const int PWM_1 = 1;
-const int PWM_2 = 2; 
+const int PWM_2 = 2;

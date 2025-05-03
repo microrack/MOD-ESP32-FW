@@ -8,4 +8,4 @@ public:
     void enter() override;
     void exit() override;
     void update(Event* event) override;
-}; 
+};
