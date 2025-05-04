@@ -1,167 +1,16 @@
 #include "oscilloscope.h"
 #include <math.h>
 
-// Initialize static members
-volatile bool OscilloscopeRoot::adc_conversion_done = false;
-OscilloscopeRoot* OscilloscopeRoot::instance = nullptr;
-
-// ISR Callback function for ADC Continuous
-void ARDUINO_ISR_ATTR OscilloscopeRoot::adcCompleteCallback() {
-    // Set flag for debugging
-    adc_conversion_done = true;
-    
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if (instance && instance->adcCompleteSemaphore) {
-        xSemaphoreGiveFromISR(instance->adcCompleteSemaphore, &xHigherPriorityTaskWoken);
-    }
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-}
-
 OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) {
-    // Store instance for callback
-    instance = this;
-    
-    // Create synchronization primitives
-    acquisitionSemaphore = xSemaphoreCreateBinary();
-    adcCompleteSemaphore = xSemaphoreCreateBinary();
+    // Create buffer mutex
     bufferMutex = xSemaphoreCreateMutex();
     
     // Initialize buffer with zeros
     for (int i = 0; i < BUFFER_SIZE; i++) {
         signal_buffer[i] = 0;
-        adc_readings[i] = 0;
     }
     
-    // Initialize ADC
-    setupADC();
-    
-    // Create ADC reading task
-    xTaskCreate(
-        adcTaskFunction,         // Function that implements the task
-        "ADC_TASK",              // Text name for the task
-        2048,                    // Stack size in words, not bytes
-        this,                    // Parameter passed into the task
-        1,                       // Priority at which the task is created
-        &adcTaskHandle           // Used to pass out the created task's handle
-    );
-}
-
-void OscilloscopeRoot::adcTaskFunction(void* pvParameters) {
-    OscilloscopeRoot* self = static_cast<OscilloscopeRoot*>(pvParameters);
-    
-    while (true) {
-        // Wait for signal to start acquisition
-        xSemaphoreTake(self->acquisitionSemaphore, portMAX_DELAY);
-        
-        // Check if we should exit
-        if (!self->isRunning) {
-            break;
-        }
-        
-        // Configure ADC Continuous mode for 16 samples per acquisition
-        uint8_t pins[] = {self->adc_pin};
-        // Use the callback and constant sampling frequency of 100kHz
-        bool configResult = analogContinuous(pins, 1, 16, SAMPLING_FREQ_HZ, &adcCompleteCallback);
-        
-        if (!configResult) {
-            continue;
-        }
-        
-        // Start ADC conversions
-        bool startResult = analogContinuousStart();
-        
-        if (!startResult) {
-            continue;
-        }
-        
-        // Decimation counter and factor
-        uint16_t decimation_counter = 0;
-        uint16_t decimation_factor = self->getDecimationFactor();
-        uint8_t current_scale = self->current_scale_index;
-        
-        // Keep sampling while isRunning is true
-        while (self->isRunning) {
-            // Check if time scale has changed
-            if (current_scale != self->current_scale_index) {
-                // Update the decimation factor
-                current_scale = self->current_scale_index;
-                decimation_factor = self->getDecimationFactor();
-                
-                // Reset counters and buffer on scale change
-                if (xSemaphoreTake(self->bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
-                    self->adc_read_index = 0;
-                    for (int i = 0; i < BUFFER_SIZE; i++) {
-                        self->signal_buffer[i] = 0;
-                        self->adc_readings[i] = 0;
-                    }
-                    xSemaphoreGive(self->bufferMutex);
-                }
-                
-                decimation_counter = 0;
-            }
-            
-            // Wait for ADC completion semaphore
-            if (xSemaphoreTake(self->adcCompleteSemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
-                // Poll for ADC data
-                adc_continuous_data_t* result = NULL;
-                
-                // Try to read data
-                if (analogContinuousRead(&result, 0)) {
-                    // Increment decimation counter
-                    decimation_counter++;
-                    
-                    // Only store samples when decimation counter hits the factor
-                    if (decimation_counter >= decimation_factor) {
-                        decimation_counter = 0;
-                        
-                        // Take mutex before modifying the buffer
-                        if (xSemaphoreTake(self->bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
-                            // Store raw reading
-                            self->adc_readings[self->adc_read_index] = result[0].avg_read_raw;
-                            
-                            // Scale reading to range -32 to 32 for display
-                            self->signal_buffer[self->adc_read_index] = map(result[0].avg_read_raw, 0, 4095, -32, 32);
-                            
-                            // Move to next position in circular buffer
-                            self->adc_read_index = (self->adc_read_index + 1) % BUFFER_SIZE;
-                            
-                            // Release mutex
-                            xSemaphoreGive(self->bufferMutex);
-                        }
-                    }
-                }
-            } else {
-                // Timeout occurred, check if we should restart ADC
-                if (self->isRunning) {
-                    // Try to restart ADC
-                    analogContinuousStop();
-                    analogContinuousStart();
-                }
-            }
-        }
-        
-        // Stop and deinitialize ADC when exiting the loop
-        analogContinuousStop();
-        analogContinuousDeinit();
-    }
-    
-    // Task will delete itself
-    vTaskDelete(NULL);
-}
-
-void OscilloscopeRoot::setupADC() {
-    // Set the ADC resolution
-    analogReadResolution(12);
-    
-    // Set the attenuation to allow for a wider input voltage range
-    analogSetPinAttenuation(adc_pin, ADC_11db);
-    
-    // Initialize buffer with zeros
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        signal_buffer[i] = 0;
-        adc_readings[i] = 0;
-    }
-    adc_read_index = 0;
+    buffer_pos = 0;
 }
 
 // Calculate the decimation factor based on the current time scale
@@ -176,8 +25,8 @@ uint16_t OscilloscopeRoot::getDecimationFactor() {
     // Calculate samples per division
     float samples_per_division = us_per_division / us_per_sample;
     
-    // Assuming we want about 32 pixels per division
-    float target_pixels_per_division = 32.0;
+    // Assuming we want about 25 pixels per division (changed from 32)
+    float target_pixels_per_division = 25.0;
     
     // Calculate decimation factor (how many samples to skip)
     uint16_t decimation = max((uint16_t)(samples_per_division / target_pixels_per_division), (uint16_t)1);
@@ -187,30 +36,39 @@ uint16_t OscilloscopeRoot::getDecimationFactor() {
 
 // Calculate how many samples should be visible based on current time scale
 uint16_t OscilloscopeRoot::getVisibleSamples() {
-    // Get display width
-    const int width = display->width();
+    // Fix the drawing width to 125 pixels
+    const int width = 125;
     
-    // With decimation in acquisition, we're already storing only the samples we need
-    // So visible samples is just the display width, or the buffer size if smaller
+    // Return the display width or buffer size, whichever is smaller
     return min((uint16_t)width, (uint16_t)BUFFER_SIZE);
+}
+
+// Calculate the sample period in microseconds based on the current time scale
+int OscilloscopeRoot::calculateSamplePeriod() {
+    // Calculate sample period from the current time scale
+    // Time scale is in ms/div, convert to microseconds
+    float us_per_division = time_scales[current_scale_index] * 1000.0;
+    
+    // Calculate appropriate sample period for the current time scale
+    // We want approximately 25 samples per division (changed from 32)
+    const float target_samples_per_division = 25.0;
+    
+    // Sample period = time per division / target samples per division
+    int sample_period_us = (int)(us_per_division / target_samples_per_division);
+    
+    // Ensure minimum sample period is 10 microseconds (100kHz max)
+    return max(sample_period_us, 10);
 }
 
 void OscilloscopeRoot::drawGraph() {
     const int height = display->height();
-    const int width = display->width();
+    const int fullWidth = display->width();
+    // Fix the drawing width to 125 pixels
+    const int width = 125;
     const int midY = height / 2;
     
-    // Take mutex before accessing the buffer for drawing
-    if (xSemaphoreTake(bufferMutex, 10 / portTICK_PERIOD_MS) != pdTRUE) {
-        // If we can't get the mutex, just return - we'll try again on next update
-        return;
-    }
-    
-    // Get the current read index (protected by mutex)
-    uint16_t current_index = adc_read_index;
-    
-    // Release mutex as soon as possible
-    xSemaphoreGive(bufferMutex);
+    // Get current ADC index
+    size_t current_index = adc.getIndex();
     
     // Calculate the offset for scrolling based on read position
     int tickOffset = current_index % 4; // 4 is the spacing between dots
@@ -224,8 +82,8 @@ void OscilloscopeRoot::drawGraph() {
         display->drawPixel(x, midY, SSD1306_WHITE);
     }
     
-    // Draw scrolling tick marks on the x-axis every 32 pixels
-    const int TICK_SPACING = 32;
+    // Draw scrolling tick marks on the x-axis every 25 pixels (changed from 32)
+    const int TICK_SPACING = 25;
     const int TICK_SIZE = 6; // 6 pixels tall (3 above, 3 below)
     
     // Calculate the offset for scrolling ticks based on read position
@@ -248,23 +106,19 @@ void OscilloscopeRoot::drawGraph() {
     // Calculate decimation factor for display
     uint16_t decimation = getDecimationFactor();
     
-    // Take mutex again before reading the buffer for drawing the graph
-    if (xSemaphoreTake(bufferMutex, 10 / portTICK_PERIOD_MS) != pdTRUE) {
-        // If we can't get the mutex, just return
-        return;
-    }
-    
-    // Draw the graph using the already decimated data
-    // Since we're decimating during acquisition, each sample in the buffer
-    // corresponds directly to one pixel on screen
-    for (int x = 0; x < min((int)width, (int)BUFFER_SIZE); x++) {
+    // Draw the graph using data from the ADC buffer
+    for (int x = 0; x < min((int)width, (int)Adc::BUFFER_SIZE); x++) {
         // Calculate the buffer index for this screen position
         // Start from the most recent sample and go back in time
-        int idx = (current_index - x - 1 + BUFFER_SIZE) % BUFFER_SIZE;
+        int idx = (current_index - x - 1 + Adc::BUFFER_SIZE) % Adc::BUFFER_SIZE;
+        
+        // Read value from ADC buffer
+        int8_t value = adc.read(idx);
         
         // Convert the value to display coordinates
-        // Map from -32...32 to screen height with middle point as zero
-        int y = midY - signal_buffer[idx] * (height / 2) / 32;
+        // The ADC class already scales to int8_t range (-32...32)
+        // Scale to screen height
+        int y = midY - value * (height / 2) / 32;
         
         // Ensure y is within display bounds
         y = constrain(y, 0, height - 1);
@@ -278,11 +132,8 @@ void OscilloscopeRoot::drawGraph() {
         }
     }
     
-    // Release mutex
-    xSemaphoreGive(bufferMutex);
-    
     // Show current time scale in the label
-    String time_label = String(time_scales[current_scale_index], 0) + "ms/div";
+    String time_label = String(time_scales[current_scale_index], 1) + "ms/div";
     
     // Handle scales less than 1ms or greater than 1000ms
     if (time_scales[current_scale_index] < 1) {
@@ -318,16 +169,20 @@ void OscilloscopeRoot::drawGraph() {
 void OscilloscopeRoot::enter() {
     display->clearDisplay();
     
-    // Start the ADC acquisition task
+    // Start the ADC with appropriate sample period
+    int sample_period_us = calculateSamplePeriod();
+    adc.start(sample_period_us);
+    
     isRunning = true;
-    xSemaphoreGive(acquisitionSemaphore);
     
     drawGraph();
     display->display();
 }
 
 void OscilloscopeRoot::exit() {
-    // Stop the ADC acquisition task
+    // Stop the ADC
+    adc.stop();
+    
     isRunning = false;
     
     display->clearDisplay();
@@ -345,10 +200,20 @@ void OscilloscopeRoot::update(Event* event) {
         // Decrease index (faster time scale) when turned clockwise
         if (event->encoder > 0 && current_scale_index > 0) {
             current_scale_index--;
+            
+            // Update ADC sample rate based on new time scale
+            int sample_period_us = calculateSamplePeriod();
+            adc.stop();
+            adc.start(sample_period_us);
         }
         // Increase index (slower time scale) when turned counter-clockwise
         else if (event->encoder < 0 && current_scale_index < TIME_SCALE_COUNT - 1) {
             current_scale_index++;
+            
+            // Update ADC sample rate based on new time scale
+            int sample_period_us = calculateSamplePeriod();
+            adc.stop();
+            adc.start(sample_period_us);
         }
     }
     
