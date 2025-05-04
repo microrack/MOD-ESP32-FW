@@ -52,15 +52,6 @@ private:
     // Mutex for buffer protection
     SemaphoreHandle_t bufferMutex;
     
-    // ADC task synchronization
-    SemaphoreHandle_t adcCompleteSemaphore;
-    
-    // Task handle
-    TaskHandle_t adcTaskHandle;
-    
-    // ADC task function
-    static void adcTaskFunction(void* pvParameters);
-    
     // Running flag
     volatile bool isRunning;
     

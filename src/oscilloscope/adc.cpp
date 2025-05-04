@@ -5,19 +5,81 @@ Adc* Adc::instance = nullptr;
 
 // ISR Callback function for ADC Continuous
 void ARDUINO_ISR_ATTR Adc::adcCompleteCallback() {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if (instance && instance->adcCompleteSemaphore) {
-        xSemaphoreGiveFromISR(instance->adcCompleteSemaphore, &xHigherPriorityTaskWoken);
+    // Ensure instance exists
+    if (!instance || !instance->isRunning) {
+        return;
     }
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    
+    // Poll for ADC data
+    adc_continuous_data_t* result = NULL;
+    
+    // Try to read data
+    if (analogContinuousRead(&result, 0)) {
+        // Calculate conversion time in microseconds
+        const float conversion_time_us = (INTERNAL_BUFFER_SIZE * 1000000.0f) / SAMPLING_FREQ_HZ;
+        
+        // Handle skipping if needed
+        if (instance->samplePeriod > conversion_time_us) {
+            // Use a local variable instead of directly incrementing volatile
+            int currentSkipCount = instance->skipCounter;
+            currentSkipCount++;
+            instance->skipCounter = currentSkipCount;
+            
+            // Calculate skip count (same as in start method)
+            int skip_count = (instance->samplePeriod / conversion_time_us) - 1;
+            
+            // Only process every (skip_count+1)th conversion
+            if (instance->skipCounter < skip_count) {
+                return; // Skip this conversion
+            }
+            
+            // Reset counter
+            instance->skipCounter = 0;
+        }
+        
+        // We don't want to use a mutex in an ISR, so we'll use direct buffer access
+        // This is safe because we're the only writer to the buffer
+        
+        // Calculate decimation based on sample period
+        if (instance->samplePeriod > conversion_time_us) {
+            // We're already skipping conversions, so just use the first value
+            
+            // Scale reading to fit in range -32 to +32 (for screen display)
+            instance->buffer[instance->index] = map(result[0].avg_read_raw, 0, 4095, -32, 32);
+            
+            // Move to next position in circular buffer
+            instance->index = (instance->index + 1) % BUFFER_SIZE;
+        } else {
+            // If sample_us < conversion_time_us, decimate internal buffer
+            // Calculate how many samples to take from internal buffer (same calculation as in start)
+            int samples_to_take = conversion_time_us / instance->samplePeriod;
+            samples_to_take = constrain(samples_to_take, 1, INTERNAL_BUFFER_SIZE);
+            
+            // Stride through the internal buffer
+            int stride = INTERNAL_BUFFER_SIZE / samples_to_take;
+            stride = max(stride, 1);
+            
+            for (int i = 0; i < samples_to_take; i++) {
+                int internal_idx = i * stride;
+                if (internal_idx < INTERNAL_BUFFER_SIZE) {
+                    // Scale reading to fit in range -32 to +32 (for screen display)
+                    instance->buffer[instance->index] = map(result[internal_idx].avg_read_raw, 0, 4095, -32, 32);
+                    
+                    // Move to next position in circular buffer
+                    instance->index = (instance->index + 1) % BUFFER_SIZE;
+                }
+            }
+        }
+    }
+    
+    // We don't need to yield because this is already an ISR
 }
 
 Adc::Adc() : index(0), isRunning(false), samplePeriod(0), skipCounter(0) {
     // Store instance for callback
     instance = this;
     
-    // Create synchronization primitives
-    adcCompleteSemaphore = xSemaphoreCreateBinary();
+    // Create synchronization primitives for safe reading from the main task
     bufferMutex = xSemaphoreCreateMutex();
     
     // Initialize buffer with zeros
@@ -34,10 +96,6 @@ Adc::~Adc() {
     stop();
     
     // Clean up resources
-    if (adcCompleteSemaphore) {
-        vSemaphoreDelete(adcCompleteSemaphore);
-    }
-    
     if (bufferMutex) {
         vSemaphoreDelete(bufferMutex);
     }
@@ -92,38 +150,40 @@ bool Adc::start(int sample_us) {
     }
     Serial.println("-----------------------------------");
     
+    // Configure ADC Continuous mode for internal buffer size
+    uint8_t pins[] = {adc_pin};
+    // Use the callback and specified sampling frequency
+    bool configResult = analogContinuous(pins, 1, INTERNAL_BUFFER_SIZE, SAMPLING_FREQ_HZ, &adcCompleteCallback);
+    
+    if (!configResult) {
+        return false;
+    }
+    
     // Set running flag
     isRunning = true;
     
-    // Create ADC reading task
-    xTaskCreate(
-        adcTaskFunction,         // Function that implements the task
-        "ADC_TASK",              // Text name for the task
-        2048,                    // Stack size in words, not bytes
-        this,                    // Parameter passed into the task
-        1,                       // Priority at which the task is created
-        &adcTaskHandle           // Used to pass out the created task's handle
-    );
+    // Start ADC conversions
+    bool startResult = analogContinuousStart();
+    
+    if (!startResult) {
+        isRunning = false;
+        return false;
+    }
     
     return true;
 }
 
 void Adc::stop() {
-    // Stop task
+    // Stop ADC
     isRunning = false;
     
-    // Wait for task to end
-    if (adcTaskHandle != nullptr) {
-        // Give some time for the task to clean up
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        
-        // Delete the task handle
-        adcTaskHandle = nullptr;
-    }
+    // Deinitialize ADC
+    analogContinuousStop();
+    analogContinuousDeinit();
 }
 
 int8_t Adc::read(size_t idx) {
-    // Take mutex before reading
+    // Take mutex before reading to ensure we don't read during an update
     if (xSemaphoreTake(bufferMutex, 10 / portTICK_PERIOD_MS) != pdTRUE) {
         return 0; // Return zero if can't acquire mutex
     }
@@ -150,156 +210,4 @@ size_t Adc::getIndex() {
     xSemaphoreGive(bufferMutex);
     
     return current_index;
-}
-
-void Adc::adcTaskFunction(void* pvParameters) {
-    Adc* self = static_cast<Adc*>(pvParameters);
-    
-    while (self->isRunning) {
-        // Calculate ADC conversion time in microseconds (same as in start method)
-        const float conversion_time_us = (INTERNAL_BUFFER_SIZE * 1000000.0f) / SAMPLING_FREQ_HZ;
-        
-        // Calculate how many conversions to skip if sample_us > conversion_time_us
-        int skip_count = 0;
-        if (self->samplePeriod > conversion_time_us) {
-            skip_count = (self->samplePeriod / conversion_time_us) - 1;
-        }
-        
-        // Configure ADC Continuous mode for internal buffer size
-        uint8_t pins[] = {self->adc_pin};
-        // Use the callback and specified sampling frequency
-        bool configResult = analogContinuous(pins, 1, INTERNAL_BUFFER_SIZE, SAMPLING_FREQ_HZ, &adcCompleteCallback);
-        
-        if (!configResult) {
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            continue;
-        }
-        
-        // Start ADC conversions
-        bool startResult = analogContinuousStart();
-        
-        if (!startResult) {
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            continue;
-        }
-        
-        // Keep sampling while isRunning is true
-        while (self->isRunning) {
-            // Wait for ADC completion semaphore
-            if (xSemaphoreTake(self->adcCompleteSemaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
-                // If sample_us > conversion_time_us, we need to skip some conversions
-                if (skip_count > 0) {
-                    // Use a local variable instead of directly incrementing volatile
-                    int currentSkipCount = self->skipCounter;
-                    currentSkipCount++;
-                    self->skipCounter = currentSkipCount;
-                    
-                    // Only process every (skip_count+1)th conversion
-                    if (self->skipCounter < skip_count) {
-                        continue; // Skip this conversion
-                    }
-                    
-                    // Reset counter
-                    self->skipCounter = 0;
-                }
-                
-                // Poll for ADC data
-                adc_continuous_data_t* result = NULL;
-                
-                // Try to read data
-                if (analogContinuousRead(&result, 0)) {
-                    // Take mutex before modifying the buffer
-                    if (xSemaphoreTake(self->bufferMutex, 10 / portTICK_PERIOD_MS) == pdTRUE) {
-                        // Calculate decimation based on sample period
-                        if (self->samplePeriod > conversion_time_us) {
-                            // We're already skipping conversions, so just use the first value
-                            
-                            // Ensure we have valid data and the averaging isn't causing problems
-                            int32_t raw_value = 0;
-                            
-                            // Check if the first sample is valid, otherwise try to use another value
-                            if (result[0].avg_read_raw != 0) {
-                                raw_value = result[0].avg_read_raw;
-                            } else {
-                                // Average some values to prevent zeros
-                                int valid_samples = 0;
-                                for (int i = 0; i < 10 && i < INTERNAL_BUFFER_SIZE; i++) {
-                                    if (result[i].avg_read_raw != 0) {
-                                        raw_value += result[i].avg_read_raw;
-                                        valid_samples++;
-                                    }
-                                }
-                                
-                                if (valid_samples > 0) {
-                                    raw_value /= valid_samples;
-                                } else {
-                                    // Use direct reading if no valid values are available
-                                    raw_value = analogRead(self->adc_pin);
-                                }
-                            }
-                            
-                            // Scale reading to fit in range -32 to +32 (for screen display)
-                            self->buffer[self->index] = map(raw_value, 0, 4095, -32, 32);
-                            
-                            // Move to next position in circular buffer
-                            self->index = (self->index + 1) % BUFFER_SIZE;
-                        } else {
-                            // If sample_us < conversion_time_us, decimate internal buffer
-                            // Calculate how many samples to take from internal buffer (same calculation as in start)
-                            int samples_to_take = conversion_time_us / self->samplePeriod;
-                            samples_to_take = constrain(samples_to_take, 1, INTERNAL_BUFFER_SIZE);
-                            
-                            // Stride through the internal buffer
-                            int stride = INTERNAL_BUFFER_SIZE / samples_to_take;
-                            stride = max(stride, 1);
-                            
-                            // In cases where we get alternating zeros (like at time_scale=100), ensure we've got good data
-                            int last_valid_value = 0;
-                            bool have_valid_value = false;
-                            
-                            for (int i = 0; i < samples_to_take; i++) {
-                                int internal_idx = i * stride;
-                                if (internal_idx < INTERNAL_BUFFER_SIZE) {
-                                    // Get the raw value from the ADC
-                                    int32_t raw_value = result[internal_idx].avg_read_raw;
-                                    
-                                    // If we got a zero and have a previous valid value, use that instead
-                                    if (raw_value == 0 && have_valid_value) {
-                                        raw_value = last_valid_value;
-                                    } else if (raw_value != 0) {
-                                        last_valid_value = raw_value;
-                                        have_valid_value = true;
-                                    }
-                                    
-                                    // Scale reading to fit in range -32 to +32 (for screen display)
-                                    self->buffer[self->index] = map(raw_value, 0, 4095, -32, 32);
-                                    
-                                    // Move to next position in circular buffer
-                                    self->index = (self->index + 1) % BUFFER_SIZE;
-                                }
-                            }
-                        }
-                        
-                        // Release mutex
-                        xSemaphoreGive(self->bufferMutex);
-                    }
-                }
-            } else {
-                // Timeout occurred, check if we should restart ADC
-                if (self->isRunning) {
-                    // Try to restart ADC
-                    analogContinuousStop();
-                    vTaskDelay(10 / portTICK_PERIOD_MS); // Add a delay to let things settle
-                    analogContinuousStart();
-                }
-            }
-        }
-        
-        // Stop and deinitialize ADC when exiting the loop
-        analogContinuousStop();
-        analogContinuousDeinit();
-    }
-    
-    // Task will delete itself
-    vTaskDelete(NULL);
 } 
