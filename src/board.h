@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 // OLED display configuration
@@ -21,6 +22,8 @@ const int ADC_1 = 37;
 const int SYNC_IN = 18;
 const int SYNC_OUT = 19;
 const int NEO_PIXEL_PIN = 23;
+const int MIDI_RX_PIN = 16;
+const int MIDI_TX_PIN = 17;
 
 // PWM parameters
 const uint32_t PWM_FREQ = 78125;
@@ -30,4 +33,15 @@ const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
 // PWM channels
 const int PWM_0 = 0;
 const int PWM_1 = 1;
-const int PWM_2 = 2; 
+const int PWM_2 = 2;
+
+// Debug serial configuration
+const unsigned long SERIAL_BAUDRATE = 115200;
+
+// MIDI configuration
+const unsigned long MIDI_BAUDRATE = 31250;
+const size_t MIDI_OUT_COUNT = 3;
+const int MIDI_SETTINGS_EEPROM_ADDR = 0;
+
+// EEPROM
+const size_t EEPROM_SIZE = 64;

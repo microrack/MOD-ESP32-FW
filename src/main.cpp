@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <SPI.h>
 #include <Wire.h>
+#include <EEPROM.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_NeoPixel.h>
@@ -31,7 +32,7 @@ Adafruit_NeoPixel pixels(1, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
     // Initialize serial
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUDRATE);
 
     // Initialize display
     if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -41,6 +42,12 @@ void setup() {
     display.setRotation(2);
     display.clearDisplay();
     display.display();
+
+    // Initialize "EEPROM"
+    if (!EEPROM.begin(EEPROM_SIZE)) {
+        Serial.println("failed to initialize EEPROM");
+        delay(1000000);
+    }
 
     // Initialize input handler
     input_handler = Input();
@@ -73,4 +80,4 @@ void loop() {
     screen_switcher.update(&event);
 
     Event::print(event);
-} 
+}
