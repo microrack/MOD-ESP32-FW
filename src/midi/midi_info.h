@@ -13,4 +13,7 @@ public:
 
 private:
     MidiSettingsState* state;
+
+    void render();
+    void handle_input(Event* event);
 };

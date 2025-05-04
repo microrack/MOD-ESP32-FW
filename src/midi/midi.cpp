@@ -22,23 +22,11 @@ MidiRoot::MidiRoot(Display* display)
 }
 
 void MidiRoot::enter() {
-    display->clearDisplay();
-    display->setTextSize(1);
-    display->setTextColor(SSD1306_WHITE);
-    display->setCursor(0,0);
-    display->println(F("MIDI Mode"));
-    display->display();
-
-    // Start with the info screen
     screen_switcher.set_screen(0);
 }
 
 void MidiRoot::exit() {
-    // Make sure to exit the current sub-screen
     screen_switcher.get_current_screen()->exit();
-
-    display->clearDisplay();
-    display->display();
 }
 
 void MidiRoot::update(Event* event) {
