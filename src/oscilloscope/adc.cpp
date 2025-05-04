@@ -214,8 +214,32 @@ void Adc::adcTaskFunction(void* pvParameters) {
                         if (self->samplePeriod > conversion_time_us) {
                             // We're already skipping conversions, so just use the first value
                             
+                            // Ensure we have valid data and the averaging isn't causing problems
+                            int32_t raw_value = 0;
+                            
+                            // Check if the first sample is valid, otherwise try to use another value
+                            if (result[0].avg_read_raw != 0) {
+                                raw_value = result[0].avg_read_raw;
+                            } else {
+                                // Average some values to prevent zeros
+                                int valid_samples = 0;
+                                for (int i = 0; i < 10 && i < INTERNAL_BUFFER_SIZE; i++) {
+                                    if (result[i].avg_read_raw != 0) {
+                                        raw_value += result[i].avg_read_raw;
+                                        valid_samples++;
+                                    }
+                                }
+                                
+                                if (valid_samples > 0) {
+                                    raw_value /= valid_samples;
+                                } else {
+                                    // Use direct reading if no valid values are available
+                                    raw_value = analogRead(self->adc_pin);
+                                }
+                            }
+                            
                             // Scale reading to fit in range -32 to +32 (for screen display)
-                            self->buffer[self->index] = map(result[0].avg_read_raw, 0, 4095, -32, 32);
+                            self->buffer[self->index] = map(raw_value, 0, 4095, -32, 32);
                             
                             // Move to next position in circular buffer
                             self->index = (self->index + 1) % BUFFER_SIZE;
@@ -229,11 +253,26 @@ void Adc::adcTaskFunction(void* pvParameters) {
                             int stride = INTERNAL_BUFFER_SIZE / samples_to_take;
                             stride = max(stride, 1);
                             
+                            // In cases where we get alternating zeros (like at time_scale=100), ensure we've got good data
+                            int last_valid_value = 0;
+                            bool have_valid_value = false;
+                            
                             for (int i = 0; i < samples_to_take; i++) {
                                 int internal_idx = i * stride;
                                 if (internal_idx < INTERNAL_BUFFER_SIZE) {
+                                    // Get the raw value from the ADC
+                                    int32_t raw_value = result[internal_idx].avg_read_raw;
+                                    
+                                    // If we got a zero and have a previous valid value, use that instead
+                                    if (raw_value == 0 && have_valid_value) {
+                                        raw_value = last_valid_value;
+                                    } else if (raw_value != 0) {
+                                        last_valid_value = raw_value;
+                                        have_valid_value = true;
+                                    }
+                                    
                                     // Scale reading to fit in range -32 to +32 (for screen display)
-                                    self->buffer[self->index] = map(result[internal_idx].avg_read_raw, 0, 4095, -32, 32);
+                                    self->buffer[self->index] = map(raw_value, 0, 4095, -32, 32);
                                     
                                     // Move to next position in circular buffer
                                     self->index = (self->index + 1) % BUFFER_SIZE;
