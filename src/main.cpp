@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <SPI.h>
 #include <Wire.h>
+#include <EEPROM.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_NeoPixel.h>
@@ -41,6 +42,12 @@ void setup() {
     display.setRotation(2);
     display.clearDisplay();
     display.display();
+
+    // Initialize "EEPROM"
+    if (!EEPROM.begin(EEPROM_SIZE)) {
+        Serial.println("failed to initialize EEPROM");
+        delay(1000000);
+    }
 
     // Initialize input handler
     input_handler = Input();

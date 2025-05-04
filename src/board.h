@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 // OLED display configuration
@@ -34,3 +35,10 @@ const int PWM_2 = 2;
 
 // Debug serial configuration
 const unsigned long SERIAL_BAUDRATE = 115200;
+
+// MIDI configuration
+const size_t MIDI_OUT_COUNT = 3;
+const int MIDI_SETTINGS_EEPROM_ADDR = 0;
+
+// EEPROM
+const size_t EEPROM_SIZE = 64;

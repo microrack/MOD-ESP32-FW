@@ -1,8 +1,7 @@
 #include "midi_settings.h"
 
-MidiSettings::MidiSettings(Display* display) : ScreenInterface(display) {
-    // Initialize any specific properties
-}
+MidiSettings::MidiSettings(Display* display, MidiSettingsState* state)
+    : ScreenInterface(display), state(state) {}
 
 void MidiSettings::enter() {
     display->clearDisplay();

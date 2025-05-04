@@ -6,8 +6,8 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
 MidiRoot::MidiRoot(Display* display)
     : ScreenInterface(display),
-      midi_info(display),
-      midi_settings(display) {
+      midi_info(display, &state),
+      midi_settings(display, &state) {
 
     // Initialize MIDI screens array
     midi_screens[0] = &midi_info;
