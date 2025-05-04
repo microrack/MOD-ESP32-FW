@@ -2,7 +2,10 @@
 
 #include <stdint.h>
 #include <Arduino.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcpp"
 #include <ESP32Encoder.h>
+#pragma GCC diagnostic pop
 
 typedef enum {
     ButtonNone,
