@@ -17,7 +17,7 @@ MidiRoot::MidiRoot(Display* display)
     screen_switcher = ScreenSwitcher(midi_screens, 2);
 
     // Initialize MIDI
-    Serial2.begin(31250, SERIAL_8N1, 16, 17); // MIDI baud rate, Tx=17, Rx=16 for Serial2 on ESP32
+    Serial2.begin(MIDI_BAUDRATE, SERIAL_8N1, MIDI_RX_PIN, MIDI_TX_PIN);
     MIDI.begin(MIDI_CHANNEL_OMNI);
 }
 

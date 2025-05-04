@@ -22,6 +22,8 @@ const int ADC_1 = 37;
 const int SYNC_IN = 18;
 const int SYNC_OUT = 19;
 const int NEO_PIXEL_PIN = 23;
+const int MIDI_RX_PIN = 16;
+const int MIDI_TX_PIN = 17;
 
 // PWM parameters
 const uint32_t PWM_FREQ = 78125;
@@ -37,6 +39,7 @@ const int PWM_2 = 2;
 const unsigned long SERIAL_BAUDRATE = 115200;
 
 // MIDI configuration
+const unsigned long MIDI_BAUDRATE = 31250;
 const size_t MIDI_OUT_COUNT = 3;
 const int MIDI_SETTINGS_EEPROM_ADDR = 0;
 
