@@ -3,12 +3,16 @@
 #include <stdint.h>
 #include <Arduino.h>
 <<<<<<< HEAD
+<<<<<<< HEAD
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcpp"
 #include <ESP32Encoder.h>
 #pragma GCC diagnostic pop
 =======
 >>>>>>> 47a553d (migrate to pioarduino new framework version, temporary remove encoder)
+=======
+#include <ESP32Encoder.h>
+>>>>>>> b23645f (Revert "migrate to pioarduino new framework version, temporary remove encoder")
 
 typedef enum {
     ButtonNone,
@@ -35,6 +39,7 @@ public:
     void begin();
 
 private:
+    ESP32Encoder encoder;
     static const int BUTTON_A = 38;
     static const int ENCODER_SW = 39;
     static const int ENCODER_A = 34;

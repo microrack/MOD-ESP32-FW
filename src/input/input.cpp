@@ -2,6 +2,9 @@
 
 
 Input::Input() {
+    // Initialize encoder
+    encoder.attachHalfQuad(ENCODER_A, ENCODER_B);
+    encoder.setCount(0);
 
     // Configure pins
     pinMode(BUTTON_A, INPUT_PULLUP);
@@ -20,7 +23,7 @@ Event Input::get_inputs() {
 
     // Get encoder value
     static int32_t last_encoder = 0;
-    int32_t current_encoder = 0;
+    int32_t current_encoder = encoder.getCount();
     event.encoder = current_encoder - last_encoder;
     last_encoder = current_encoder;
 
