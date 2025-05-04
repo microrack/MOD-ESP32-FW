@@ -31,3 +31,6 @@ const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
 const int PWM_0 = 0;
 const int PWM_1 = 1;
 const int PWM_2 = 2;
+
+// Debug serial configuration
+const unsigned long SERIAL_BAUDRATE = 115200;

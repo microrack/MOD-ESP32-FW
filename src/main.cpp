@@ -31,7 +31,7 @@ Adafruit_NeoPixel pixels(1, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
     // Initialize serial
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUDRATE);
 
     // Initialize display
     if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
