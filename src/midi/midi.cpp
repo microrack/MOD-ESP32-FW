@@ -50,7 +50,7 @@ void MidiRoot::update(Event* event) {
     }
 
     // Handle button events - specifically switch screens on button_sw press
-    switch (event->button_sw) {
+    switch (event->button_a) {
         case ButtonPress:
             // Switch to next MIDI screen
             screen_switcher.set_screen(screen_switcher.get_next());
