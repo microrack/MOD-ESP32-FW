@@ -14,5 +14,22 @@ public:
     void update(Event* event) override;
 
 private:
+    enum MenuItems {
+        MENU_CHANNEL,
+        MENU_OUT_A,
+        MENU_OUT_B,
+        MENU_OUT_C,
+        MENU_CLOCK,
+        MENU_COUNT
+    };
+
     MidiSettingsState* state;
+    MenuItems current_item;
+    uint8_t blink_counter;
+    bool is_editing;
+
+    void render(void);
+    void render_menu(void);
+    void handle_input(Event* event);
+    void handle_menu_input(Event* event);
 };
