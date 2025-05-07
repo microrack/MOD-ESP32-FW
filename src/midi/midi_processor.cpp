@@ -60,30 +60,65 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
 void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
     if (!is_channel_match(channel)) return;
 
+    if (velocity == 0) {
+        handle_note_off(channel, note, velocity);
+        return;
+    }
 
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
+
+        }
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+
+        }
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
+
+        }
+    }
 }
 
 void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
     if (!is_channel_match(channel)) return;
 
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
+
+        }
+    }
 }
 
 void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
     if (!is_channel_match(channel)) return;
+
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
+
+        }
+    }
 }
 
 void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     if (!is_channel_match(channel)) return;
 
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
+
+        }
+    }
 }
 
 void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
     if (!is_channel_match(channel)) return;
 
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
+
+        }
+    }
 }
 
 void MidiProcessor::handle_clock(void) {
-
 }
 
 void MidiProcessor::handle_start(void) {
