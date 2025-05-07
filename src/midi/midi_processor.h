@@ -3,6 +3,7 @@
 #include "../board.h"
 #include "../urack_types.h"
 #include "midi_settings_state.h"
+#include "note_history.h"
 
 class MidiProcessor {
 public:
@@ -18,7 +19,14 @@ public:
     void handle_stop(void);
 
 private:
+    static const int V_NOTE = 1024 / (12 * 10);
+
     MidiSettingsState* state;
+    NoteHistory note_history;
+
+    void out_gate(int pwm_ch, int velocity);
+    void out_pitch(int pwm_ch, int note);
+    void out_7bit_value(int pwm_ch, int value);
 
     inline bool is_channel_match(uint8_t channel) const {
         return (state->get_midi_channel() == channel) ||
