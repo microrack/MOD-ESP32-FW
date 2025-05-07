@@ -81,6 +81,7 @@ const char* MidiSettingsState::midi_channel_to_string(MidiChannel ch) {
 
 const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
     switch (type) {
+        case MidiOutGate:        return "gate";
         case MidiOutPitch:       return "pitch";
         case MidiOutVelocity:    return "velocity";
         case MidiOutAfterTouch:  return "aftertouch";

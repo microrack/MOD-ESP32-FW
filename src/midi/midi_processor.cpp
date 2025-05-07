@@ -43,6 +43,14 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
 
     processor = this;
 
+    // Initialize PWM
+    ledcSetup(PWM_0, PWM_FREQ, PWM_RESOLUTION);
+    ledcSetup(PWM_1, PWM_FREQ, PWM_RESOLUTION);
+    ledcSetup(PWM_2, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttachPin(PWM_0_PIN, PWM_0);
+    ledcAttachPin(PWM_1_PIN, PWM_1);
+    ledcAttachPin(PWM_2_PIN, PWM_2);
+
     // Initialize MIDI
     Serial2.begin(MIDI_BAUDRATE, SERIAL_8N1, MIDI_RX_PIN, MIDI_TX_PIN);
     MIDI.begin(MIDI_CHANNEL_OMNI);
@@ -57,39 +65,127 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     MIDI.setHandleStop(::handle_stop);
 }
 
+void MidiProcessor::out_pitch(int ch, int note)
+{
+    int v = V_NOTE * note;
+    if (v > int(PWM_MAX_VAL))
+        return;
+
+    ledcWrite(ch, v);
+}
+
+void MidiProcessor::out_7bit_value(int pwm_ch, int value)
+{
+    const int BITS = 7;
+    const int SHIFT = PWM_RESOLUTION - BITS;
+
+    int v = value << SHIFT;
+    ledcWrite(pwm_ch, v);
+}
+
+void MidiProcessor::out_gate(int pwm_ch, int velocity)
+{
+    if (velocity == 0) {
+        ledcWrite(pwm_ch, 0);
+    } else {
+        ledcWrite(pwm_ch, PWM_MAX_VAL);
+    }
+}
+
 void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
     if (!is_channel_match(channel)) return;
 
+    if (velocity == 0) {
+        handle_note_off(channel, note, velocity);
+        return;
+    }
 
+
+    if (!note_history.push(note)) {
+        // Note already in use. Skipping.
+        return;
+    }
+
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
+            out_gate(i, velocity);
+        }
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+            out_pitch(i, note);
+        }
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
+            out_7bit_value(i, velocity);
+        }
+    }
 }
 
 void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
     if (!is_channel_match(channel)) return;
 
+    uint8_t prev_note;
+    if (!note_history.pop(note, prev_note)) {
+        // Note not in use. Skipping.
+        return;
+    }
+
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (prev_note == NoteHistory::NO_NOTE) {
+            if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
+                out_gate(i, 0);
+            }
+            if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
+                out_7bit_value(i, 0);
+            }
+        } else {
+            if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+                // Restore previous note
+                out_pitch(i, prev_note);
+            }
+        }
+    }
 }
 
 void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
     if (!is_channel_match(channel)) return;
+
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
+            out_7bit_value(i, value);
+        }
+    }
 }
 
 void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     if (!is_channel_match(channel)) return;
 
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
+            out_7bit_value(i, value);
+        }
+    }
 }
 
 void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
     if (!is_channel_match(channel)) return;
 
+    for (int i = 0; i < state->get_midi_out_count(); i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
+            // TODO: implement
+        }
+    }
 }
 
 void MidiProcessor::handle_clock(void) {
+    if (state->get_midi_clk_type() != MidiClkType::MidiClkExt) return;
 
 }
 
 void MidiProcessor::handle_start(void) {
+    if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
 
 }
 
 void MidiProcessor::handle_stop(void) {
+    if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
 
 }
