@@ -211,7 +211,7 @@ void OscilloscopeRoot::drawGraph() {
     const int LABEL_Y = 2;       // Top margin
     
     // Draw white background rectangle
-    display->fillRect(LABEL_X, LABEL_Y, LABEL_WIDTH, LABEL_HEIGHT, SSD1306_WHITE);
+    // display->fillRect(LABEL_X, LABEL_Y, LABEL_WIDTH, LABEL_HEIGHT, SSD1306_WHITE);
     
     // Draw text in black
     display->setTextColor(SSD1306_BLACK);
