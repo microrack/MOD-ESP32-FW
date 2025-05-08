@@ -217,7 +217,7 @@ void OscilloscopeRoot::drawGraph() {
     display->setTextColor(SSD1306_BLACK);
     display->setTextSize(1);
     display->setCursor(LABEL_X + 2, LABEL_Y);
-    display->print(time_label);
+    // display->print(time_label);
     
     // Reset text color to white for any future drawing
     display->setTextColor(SSD1306_WHITE);

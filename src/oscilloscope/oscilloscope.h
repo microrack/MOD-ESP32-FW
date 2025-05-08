@@ -30,8 +30,8 @@ private:
     
     // Timing variables
     // Time scales in milliseconds per division
-    static const uint8_t TIME_SCALE_COUNT = 9;
-    const float time_scales[TIME_SCALE_COUNT] = {1, 2, 5, 10, 20, 50, 100, 200, 500};
+    static const uint8_t TIME_SCALE_COUNT = 6;
+    const float time_scales[TIME_SCALE_COUNT] = {10, 20, 50, 100, 200, 500};
     uint8_t current_scale_index = 4; // Default to 20ms/div
     float sample_interval_ms = 10.0;
     void updateSampleInterval();
