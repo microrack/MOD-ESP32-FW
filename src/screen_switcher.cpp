@@ -23,13 +23,13 @@ void ScreenSwitcher::set_screen(size_t index) {
     if (screen_count == 0 || index >= screen_count) {
         return;
     }
-    
+
     // Exit current screen
     screens[current_index]->exit();
-    
+
     // Change index
     current_index = index;
-    
+
     // Enter new screen
     screens[current_index]->enter();
 }
@@ -45,4 +45,4 @@ ScreenInterface* ScreenSwitcher::get_current_screen() const {
         return nullptr;
     }
     return screens[current_index];
-} 
+}

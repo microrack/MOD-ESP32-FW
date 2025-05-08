@@ -42,4 +42,10 @@ private:
     uint32_t button_sw_press_time;
     bool button_a_pressed;
     bool button_sw_pressed;
+    
+    // Debounce variables
+    int last_button_a_state;
+    int last_button_sw_state;
+    unsigned long last_button_a_change_time;
+    unsigned long last_button_sw_change_time;
 };

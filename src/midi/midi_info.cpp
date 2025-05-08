@@ -1,6 +1,8 @@
 #include "midi_info.h"
+#include "util.h"
 
-MidiInfo::MidiInfo(Display* display) : ScreenInterface(display) {
+MidiInfo::MidiInfo(Display* display, MidiSettingsState* state)
+    : ScreenInterface(display), state(state) {
     // Initialize any specific properties
 }
 
@@ -18,26 +20,46 @@ void MidiInfo::exit() {
     display->display();
 }
 
-void MidiInfo::update(Event* event) {
+void MidiInfo::render() {
+    display->clearDisplay();
+    display->setTextSize(1);
+    display->setTextColor(SSD1306_WHITE);
+    display->setCursor(0,0);
+
+    char buffer[32];
+    display->setTextSize(2);
+    sprintf(buffer, "BPM: %s", state->get_bpm_str());
+    display->println(buffer);
+    display->setTextSize(1);
+
+    sprintf(buffer, "Ch: %s  Clk: %s",
+            state->get_midi_channel_str(),
+            state->get_midi_clk_type_str());
+    display->println(buffer);
+    display->println();
+
+    sprintf(buffer, "Out A: %s", state->get_midi_out_type_str(0));
+    display->println(buffer);
+    sprintf(buffer, "Out B: %s", state->get_midi_out_type_str(1));
+    display->println(buffer);
+    sprintf(buffer, "Out C: %s", state->get_midi_out_type_str(2));
+    display->println(buffer);
+
+    display->display();
+}
+
+void MidiInfo::handle_input(Event* event) {
     if (event == nullptr) return;
 
-    // Handle encoder changes
     if (event->encoder != 0) {
-        // Process encoder movement
+        state->set_bpm(clampi(state->get_bpm() + event->encoder,
+                           state->get_min_bpm(),
+                           state->get_max_bpm()));
+        state->store(); // TODO: delay before storing for saving FLASH
     }
+}
 
-    // Handle button events
-    switch (event->button_a) {
-        case ButtonPress:
-            // Handle button A press
-            break;
-        case ButtonRelease:
-            // Handle button A release
-            break;
-        default:
-            break;
-    }
-
-    // Update display after handling events
-    display->display();
-} 
+void MidiInfo::update(Event* event) {
+    handle_input(event);
+    render();
+}

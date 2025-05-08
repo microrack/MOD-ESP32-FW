@@ -287,7 +287,7 @@ void OscilloscopeRoot::update(Event* event) {
         default:
             break;
     }
-    
+
     // Update display after handling events
     display->display();
-} 
+}
