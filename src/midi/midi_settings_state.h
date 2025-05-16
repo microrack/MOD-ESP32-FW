@@ -31,6 +31,7 @@ enum MidiChannel {
 };
 
 enum MidiOutType {
+    MidiOutGate,
     MidiOutPitch,
     MidiOutVelocity,
     MidiOutAfterTouch,
@@ -175,7 +176,7 @@ public:
     const static int MAX_MIDI_CHANNEL = MidiChannelAll;
     const static int MIN_MIDI_CHANNEL = MidiChannel0;
     const static int MAX_MIDI_OUT_TYPE = MidiOutCc127;
-    const static int MIN_MIDI_OUT_TYPE = MidiOutPitch;
+    const static int MIN_MIDI_OUT_TYPE = MidiOutGate;
     const static int MAX_MIDI_CLK_TYPE = MidiClkExt;
     const static int MIN_MIDI_CLK_TYPE = MidiClkInt;
 
@@ -208,7 +209,8 @@ public:
     int get_max_midi_clk_type(void) { return MAX_MIDI_CLK_TYPE; }
     int get_min_midi_clk_type(void) { return MIN_MIDI_CLK_TYPE; }
 
-
+    static const size_t MIDI_OUT_COUNT = 3;
+    size_t get_midi_out_count(void) { return MIDI_OUT_COUNT; }
 private:
     uint32_t magic;
     uint32_t version;

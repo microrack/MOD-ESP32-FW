@@ -7,6 +7,7 @@
 #include "midi_info.h"
 #include "midi_settings.h"
 #include "midi_settings_state.h"
+#include "midi_processor.h"
 
 class MidiRoot : public ScreenInterface {
 public:
@@ -21,4 +22,5 @@ private:
     ScreenInterface* midi_screens[2];
     ScreenSwitcher screen_switcher;
     MidiSettingsState state;
+    MidiProcessor processor;
 };

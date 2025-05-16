@@ -1,13 +1,10 @@
 #include "midi.h"
-#include <MIDI.h>
-
-// MIDI interface
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
 MidiRoot::MidiRoot(Display* display)
     : ScreenInterface(display),
       midi_info(display, &state),
-      midi_settings(display, &state) {
+      midi_settings(display, &state),
+      processor(&state) {
 
     // Initialize MIDI screens array
     midi_screens[0] = &midi_info;
@@ -15,10 +12,6 @@ MidiRoot::MidiRoot(Display* display)
 
     // Initialize screen switcher with the screens array
     screen_switcher = ScreenSwitcher(midi_screens, 2);
-
-    // Initialize MIDI
-    Serial2.begin(MIDI_BAUDRATE, SERIAL_8N1, MIDI_RX_PIN, MIDI_TX_PIN);
-    MIDI.begin(MIDI_CHANNEL_OMNI);
 }
 
 void MidiRoot::enter() {
