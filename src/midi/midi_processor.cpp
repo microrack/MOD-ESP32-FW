@@ -1,5 +1,6 @@
 #include <MIDI.h>
 #include "midi_processor.h"
+#include "board.h"
 
 // MIDI interface
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
@@ -55,6 +56,10 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     MIDI.setHandleClock(::handle_clock);
     MIDI.setHandleStart(::handle_start);
     MIDI.setHandleStop(::handle_stop);
+
+    ledcAttach(PWM_0_PIN, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttach(PWM_1_PIN, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttach(PWM_2_PIN, PWM_FREQ, PWM_RESOLUTION);
 }
 
 void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
@@ -67,13 +72,13 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
-
+            ledcWrite(PWM_PINS[i], PWM_MAX_VAL);
         }
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
-
+            ledcWrite(PWM_PINS[i], note * PWM_MAX_VAL / 127);
         }
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
-
+            ledcWrite(PWM_PINS[i], velocity * PWM_MAX_VAL / 127 + PWM_MAX_VAL / 2);
         }
     }
 }
@@ -83,7 +88,7 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
-
+            ledcWrite(PWM_PINS[i], PWM_MAX_VAL / 2);
         }
     }
 }
@@ -93,7 +98,7 @@ void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
-
+            ledcWrite(PWM_PINS[i], cc * PWM_MAX_VAL / 127 + PWM_MAX_VAL / 2);
         }
     }
 }
@@ -103,7 +108,7 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
-
+            ledcWrite(PWM_PINS[i], value * PWM_MAX_VAL / 127 + PWM_MAX_VAL / 2);
         }
     }
 }

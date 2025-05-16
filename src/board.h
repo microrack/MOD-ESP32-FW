@@ -9,14 +9,18 @@
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
 
+// PWM pins array
+const int PWM_PINS[] = {33, 25, 26};
+const size_t PWM_PIN_COUNT = sizeof(PWM_PINS) / sizeof(PWM_PINS[0]);
+
 // Pin definitions
 const int BUTTON_A = 38;
 const int ENCODER_SW = 39;
 const int ENCODER_A = 34;
 const int ENCODER_B = 35;
-const int PWM_0_PIN = 33;
-const int PWM_1_PIN = 25;
-const int PWM_2_PIN = 26;
+const int PWM_0_PIN = PWM_PINS[0];
+const int PWM_1_PIN = PWM_PINS[1];
+const int PWM_2_PIN = PWM_PINS[2];
 const int ADC_0 = 36;
 const int ADC_1 = 37;
 const int SYNC_IN = 18;
@@ -29,11 +33,6 @@ const int MIDI_TX_PIN = 17;
 const uint32_t PWM_FREQ = 78125;
 const uint8_t  PWM_RESOLUTION = 10;
 const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
-
-// PWM channels
-const int PWM_0 = 0;
-const int PWM_1 = 1;
-const int PWM_2 = 2;
 
 // Debug serial configuration
 const unsigned long SERIAL_BAUDRATE = 115200;
