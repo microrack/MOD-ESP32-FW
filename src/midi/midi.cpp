@@ -25,6 +25,9 @@ void MidiRoot::exit() {
 void MidiRoot::update(Event* event) {
     if (event == nullptr) return;
 
+    // Update MIDI processor
+    processor.update();
+
     // Handle encoder changes
     if (event->encoder != 0) {
         // Pass to current screen

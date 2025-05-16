@@ -8,6 +8,7 @@ class MidiProcessor {
 public:
     MidiProcessor(MidiSettingsState* state);
 
+    void update();
     void handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity);
     void handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity);
     void handle_cc(uint8_t channel, uint8_t cc, uint8_t value);

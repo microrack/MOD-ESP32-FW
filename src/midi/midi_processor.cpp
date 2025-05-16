@@ -133,3 +133,7 @@ void MidiProcessor::handle_start(void) {
 void MidiProcessor::handle_stop(void) {
 
 }
+
+void MidiProcessor::update() {
+    MIDI.read();
+}
