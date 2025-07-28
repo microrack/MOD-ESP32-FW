@@ -16,7 +16,12 @@ private:
     static const uint8_t GRAPH_TRACE_WIDTH = 2; // Width of the graph trace in pixels
     uint16_t signal_buffer[BUFFER_SIZE];
 
+    const int TICK_SPACING = 25;
+    size_t tickOffset = 0;
+
     void drawGraph();
+    bool is_rolling(size_t scale_index);
+    uint16_t scale_to_rate(size_t scale_index);
     
     // Timing variables
     // Time scales in milliseconds per division

@@ -3,8 +3,23 @@
 #include <math.h>
 #include <soc/adc_channel.h>
 
-OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) {
 
+bool OscilloscopeRoot::is_rolling(size_t scale_index) {
+    return time_scales[scale_index] > 100;
+}
+
+uint16_t OscilloscopeRoot::scale_to_rate(size_t scale_index) {
+    return (uint16_t)(1.0 / (time_scales[scale_index] * 0.001 / TICK_SPACING));
+}
+
+OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) {
+    signal_config.channel_count = 1;
+    signal_config.channels[0] = static_cast<adc_channel_t>(ADC1_GPIO36_CHANNEL);
+    signal_config.trigger_mode = TriggerMode::FREE;
+    signal_config.trigger_level = 0;
+    signal_config.sampling_rate = 100;
+
+    sigscoper.begin();
 }
 
 void OscilloscopeRoot::drawGraph() {
@@ -73,8 +88,9 @@ void OscilloscopeRoot::drawGraph() {
     // Reset text color to white for any future drawing
     display->setTextColor(SSD1306_WHITE);
     */
+    const int TICK_SIZE = 6; // 6 pixels tall (3 above, 3 below)
 
-   static uint32_t last_trigger_wait = millis();
+    static uint32_t last_trigger_wait = millis();
 
     if(!sigscoper.is_ready() && last_trigger_wait == 0) {
         last_trigger_wait = millis();
@@ -82,7 +98,8 @@ void OscilloscopeRoot::drawGraph() {
 
     if(millis() - last_trigger_wait > 1000 || sigscoper.is_ready() || true) {
         sigscoper.get_stats(0, &stats);
-        sigscoper.get_buffer(0, SCREEN_WIDTH, signal_buffer);
+        size_t _pos = 0;
+        sigscoper.get_buffer(0, SCREEN_WIDTH, signal_buffer, &_pos);
         sigscoper.restart();
         last_trigger_wait = 0;
     }
@@ -96,7 +113,7 @@ void OscilloscopeRoot::drawGraph() {
     );
 
     int graph_y = 40;
-    for (int i = 0; i < SCREEN_WIDTH - 1; i++) {
+    for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
         int y1 = map(
             signal_buffer[i], 400, 2400, SCREEN_HEIGHT - 10, 10);
         int y2 = map(
@@ -122,27 +139,22 @@ void OscilloscopeRoot::drawGraph() {
     }
     
     display->setCursor(0, SCREEN_HEIGHT - 10);
-    display->printf("%.2f ms/div", time_scales[current_scale_index]);
+    display->printf("%.2f ms/div %d Hz",
+        time_scales[current_scale_index],
+        scale_to_rate(current_scale_index)
+    );
 
-    const int TICK_SPACING = 25;
-    const int TICK_SIZE = 6; // 6 pixels tall (3 above, 3 below)
-    const int midY = SCREEN_HEIGHT / 2;
-    int tickOffset = 0;
-    
-    // Draw ticks at positions that scroll with the signal
-    for (int x = SCREEN_WIDTH - tickOffset; x >= 0; x -= TICK_SPACING) {
-        for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
-            display->drawPixel(x, y, SSD1306_WHITE);
+    if(!is_rolling(current_scale_index)) {
+        const int midY = SCREEN_HEIGHT / 2;
+        for (int x = SCREEN_WIDTH - 2; x >= 0; x -= TICK_SPACING) {
+            for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
+                display->drawPixel(x, y, SSD1306_WHITE);
+            }
         }
     }
 }
 
 void OscilloscopeRoot::enter() {
-    signal_config.channel_count = 1;
-    signal_config.channels[0] = static_cast<adc_channel_t>(ADC1_GPIO36_CHANNEL);
-    signal_config.trigger_mode = TriggerMode::FREE;
-    signal_config.trigger_level = 0;
-    signal_config.sampling_rate = 100;
 
     if (!sigscoper.start(signal_config)) {
         Serial.println("Failed to start signal monitoring");
@@ -174,12 +186,19 @@ void OscilloscopeRoot::update(Event* event) {
     if (event->encoder != 0) {
         // Decrease index (faster time scale) when turned clockwise
         if (event->encoder > 0 && current_scale_index > 0) {
-            current_scale_index--;
+            current_scale_index--;            
         }
         // Increase index (slower time scale) when turned counter-clockwise
         else if (event->encoder < 0 && current_scale_index < TIME_SCALE_COUNT - 1) {
             current_scale_index++;
         }
+
+        signal_config.sampling_rate = scale_to_rate(current_scale_index);
+        signal_config.trigger_mode = is_rolling(current_scale_index)
+            ? TriggerMode::FREE
+            : TriggerMode::AUTO_RISE;
+        sigscoper.stop();
+        sigscoper.start(signal_config);
     }
     
     // Draw the graph on each update
