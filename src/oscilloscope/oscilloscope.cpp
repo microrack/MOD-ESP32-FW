@@ -49,57 +49,118 @@ void OscilloscopeRoot::drawGraph() {
     }
 
     display->setCursor(0, 0);
-    display->printf("%.1f %.1f ", 
-        std::min(std::max(-9.0, stats.min_value / 1000.0), 9.0),
-        std::min(std::max(-9.0, stats.max_value / 1000.0), 9.0)
-    );
 
-    if(stats.frequency >= 1000) {
-        display->printf("%.1f kHz ", stats.frequency / 1000.0);
-    } else {
-        display->printf("%.0f Hz ", stats.frequency);
-    }
-
-    display->printf("%.0f %s/d",
+    display->printf("%.0f %s/d ",
         time_scales[current_scale_index] >= 1.0
             ? time_scales[current_scale_index]
             : time_scales[current_scale_index] * 1000.0,
         time_scales[current_scale_index] >= 1.0 ? "ms" : "us"
     );
 
-    int graph_y = 40;
-    // Draw first channel (thick line - 3 pixels)
-    for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
-        if(signal_buffer[i] == 0) continue;
-        if(signal_buffer[i + 1] == 0) continue;
-        
-        int y1 = map(
-            signal_buffer[i], 400, 2400, SCREEN_HEIGHT - 10, 10);
-        int y2 = map(
-            signal_buffer[i + 1], 400, 2400, SCREEN_HEIGHT - 10, 10);
-        
-        if (y1 >= 0 && y1 < SCREEN_HEIGHT && y2 >= 0 && y2 < SCREEN_HEIGHT) {
-            // Draw line with 3-pixel width
-            display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
-            display->drawLine(i, y1 + 1, i + 1, y2 + 1, SSD1306_WHITE);
-            display->drawLine(i, y1 + 2, i + 2, y2 + 2, SSD1306_WHITE);
-        }
+    if(display_mode == DisplayMode::SINGLE) {
+        display->printf("| %.1f | %.1f ", 
+            std::min(std::max(-9.0, stats.min_value / 1000.0), 9.0),
+            std::min(std::max(-9.0, stats.max_value / 1000.0), 9.0)
+        );
     }
     
-    // Draw second channel (thin line - 1 pixel)
-    for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
-        if(signal_buffer2[i] == 0) continue;
-        if(signal_buffer2[i + 1] == 0) continue;
-        
-        int y1 = map(
-            signal_buffer2[i], 400, 2400, SCREEN_HEIGHT - 10, 10);
-        int y2 = map(
-            signal_buffer2[i + 1], 400, 2400, SCREEN_HEIGHT - 10, 10);
-        
-        if (y1 >= 0 && y1 < SCREEN_HEIGHT && y2 >= 0 && y2 < SCREEN_HEIGHT) {
-            // Draw line with 1-pixel width
-            display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
-        }
+
+    int graph_y = 40;
+    
+    switch (display_mode) {
+        case DisplayMode::SINGLE:
+            // Draw only first channel (thick line - 3 pixels)
+            for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
+                if(signal_buffer[i] == 0) continue;
+                if(signal_buffer[i + 1] == 0) continue;
+                
+                int y1 = map(
+                    signal_buffer[i], 400, 2400, SCREEN_HEIGHT, 10);
+                int y2 = map(
+                    signal_buffer[i + 1], 400, 2400, SCREEN_HEIGHT, 10);
+                
+                if (y1 >= 0 && y1 < SCREEN_HEIGHT && y2 >= 0 && y2 < SCREEN_HEIGHT) {
+                    // Draw line with 3-pixel width
+                    display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 1, i + 1, y2 + 1, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 2, i + 2, y2 + 2, SSD1306_WHITE);
+                }
+            }
+            break;
+            
+        case DisplayMode::JOINED:
+        // Draw only first channel (thick line - 3 pixels)
+            for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
+                if(signal_buffer[i] == 0) continue;
+                if(signal_buffer[i + 1] == 0) continue;
+                
+                int y1 = map(
+                    signal_buffer[i], 400, 2400, SCREEN_HEIGHT, 10);
+                int y2 = map(
+                    signal_buffer[i + 1], 400, 2400, SCREEN_HEIGHT, 10);
+                
+                if (y1 >= 0 && y1 < SCREEN_HEIGHT && y2 >= 0 && y2 < SCREEN_HEIGHT) {
+                    // Draw line with 3-pixel width
+                    display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 1, i + 1, y2 + 1, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 2, i + 2, y2 + 2, SSD1306_WHITE);
+                }
+            }
+
+            // Draw second channel (thin line - 1 pixel)
+            for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
+                if(signal_buffer2[i] == 0) continue;
+                if(signal_buffer2[i + 1] == 0) continue;
+                
+                int y1 = map(
+                    signal_buffer2[i], 400, 2400, SCREEN_HEIGHT, 10);
+                int y2 = map(
+                    signal_buffer2[i + 1], 400, 2400, SCREEN_HEIGHT, 10);
+                
+                if (y1 >= 0 && y1 < SCREEN_HEIGHT && y2 >= 0 && y2 < SCREEN_HEIGHT) {
+                    // Draw line with 1-pixel width
+                    display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
+                }
+            }
+            break;
+            
+        case DisplayMode::SPLIT:
+            // Draw first channel in upper half (thick line - 3 pixels)
+            for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
+                if(signal_buffer[i] == 0) continue;
+                if(signal_buffer[i + 1] == 0) continue;
+                
+                int y1 = map(
+                    signal_buffer[i], 400, 2400, SCREEN_HEIGHT/2, 10);
+                int y2 = map(
+                    signal_buffer[i + 1], 400, 2400, SCREEN_HEIGHT/2, 10);
+                
+                if (y1 >= 0 && y1 < SCREEN_HEIGHT/2 && y2 >= 0 && y2 < SCREEN_HEIGHT/2) {
+                    // Draw line with 3-pixel width
+                    display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 1, i + 1, y2 + 1, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 2, i + 2, y2 + 2, SSD1306_WHITE);
+                }
+            }
+            
+            // Draw second channel in lower half (thick line - 3 pixels)
+            for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
+                if(signal_buffer2[i] == 0) continue;
+                if(signal_buffer2[i + 1] == 0) continue;
+                
+                int y1 = map(
+                    signal_buffer2[i], 400, 2400, SCREEN_HEIGHT, SCREEN_HEIGHT/2);
+                int y2 = map(
+                    signal_buffer2[i + 1], 400, 2400, SCREEN_HEIGHT, SCREEN_HEIGHT/2);
+                
+                if (y1 >= SCREEN_HEIGHT/2 && y1 < SCREEN_HEIGHT && y2 >= SCREEN_HEIGHT/2 && y2 < SCREEN_HEIGHT) {
+                    // Draw line with 3-pixel width
+                    display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 1, i + 1, y2 + 1, SSD1306_WHITE);
+                    display->drawLine(i, y1 + 2, i + 2, y2 + 2, SSD1306_WHITE);
+                }
+            }
+            break;
     }
 
     
@@ -119,18 +180,45 @@ void OscilloscopeRoot::drawGraph() {
     }
     // */
 
-    const int midY = SCREEN_HEIGHT / 2;
-
     if(!is_rolling(current_scale_index)) {
-        for (int x = SCREEN_WIDTH - 2; x >= 0; x -= TICK_SPACING) {
-            for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
-                display->drawPixel(x, y, SSD1306_WHITE);
+        if (display_mode == DisplayMode::SPLIT) {
+            // Draw separate ticks and midY lines for split mode
+            const int midY1 = SCREEN_HEIGHT / 4;  // Middle of upper half
+            const int midY2 = 3 * SCREEN_HEIGHT / 4;  // Middle of lower half
+            
+            // Draw ticks for upper half (first channel)
+            for (int x = SCREEN_WIDTH - 2; x >= 0; x -= TICK_SPACING) {
+                for (int y = midY1 - TICK_SIZE/2; y <= midY1 + TICK_SIZE/2; y++) {
+                    display->drawPixel(x, y, SSD1306_WHITE);
+                }
+            }
+            
+            // Draw ticks for lower half (second channel)
+            for (int x = SCREEN_WIDTH - 2; x >= 0; x -= TICK_SPACING) {
+                for (int y = midY2 - TICK_SIZE/2; y <= midY2 + TICK_SIZE/2; y++) {
+                    display->drawPixel(x, y, SSD1306_WHITE);
+                }
+            }
+            
+            // Draw dotted midY lines for both halves
+            for (int x = SCREEN_WIDTH - tickOffset; x >= 0; x -= 4) {
+                display->drawPixel(x, midY1, SSD1306_WHITE);
+                display->drawPixel(x, midY2, SSD1306_WHITE);
+            }
+        } else {
+            // Draw single midY line and ticks for other modes
+            const int midY = SCREEN_HEIGHT / 2;
+            
+            for (int x = SCREEN_WIDTH - 2; x >= 0; x -= TICK_SPACING) {
+                for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
+                    display->drawPixel(x, y, SSD1306_WHITE);
+                }
+            }
+            
+            for (int x = SCREEN_WIDTH - tickOffset; x >= 0; x -= 4) {
+                display->drawPixel(x, midY, SSD1306_WHITE);
             }
         }
-    }
-
-    for (int x = SCREEN_WIDTH - tickOffset; x >= 0; x -= 4) {
-        display->drawPixel(x, midY, SSD1306_WHITE);
     }
 
     // display->setCursor(0, SCREEN_HEIGHT - 10);
@@ -205,7 +293,18 @@ void OscilloscopeRoot::update(Event* event) {
 
     switch (event->button_sw) {
         case ButtonPress:
-            // Handle encoder switch press
+            // Switch display mode
+            switch (display_mode) {
+                case DisplayMode::SINGLE:
+                    display_mode = DisplayMode::JOINED;
+                    break;
+                case DisplayMode::JOINED:
+                    display_mode = DisplayMode::SPLIT;
+                    break;
+                case DisplayMode::SPLIT:
+                    display_mode = DisplayMode::SINGLE;
+                    break;
+            }
             break;
         case ButtonRelease:
             // Handle encoder switch release

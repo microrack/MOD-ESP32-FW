@@ -3,6 +3,12 @@
 #include "sigscoper.h"
 #include "../urack_types.h"
 
+enum class DisplayMode {
+    SINGLE,  // Only one channel shows
+    JOINED,  // Two channels on single graph
+    SPLIT    // Two channels on separate graphs
+};
+
 class OscilloscopeRoot : public ScreenInterface {
 public:
     OscilloscopeRoot(Display* display);
@@ -38,4 +44,5 @@ private:
     Sigscoper sigscoper;
     SigscoperConfig signal_config;
     SigscoperStats stats;
+    DisplayMode display_mode = DisplayMode::JOINED;  // Default mode
 }; 
