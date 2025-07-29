@@ -15,9 +15,12 @@ uint16_t OscilloscopeRoot::scale_to_rate(size_t scale_index) {
 OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) {
     signal_config.channel_count = 1;
     signal_config.channels[0] = static_cast<adc_channel_t>(ADC1_GPIO36_CHANNEL);
-    signal_config.trigger_mode = TriggerMode::FREE;
-    signal_config.trigger_level = 0;
-    signal_config.sampling_rate = 100;
+    signal_config.trigger_mode = is_rolling(current_scale_index)
+        ? TriggerMode::FREE
+        : TriggerMode::AUTO_RISE;
+    signal_config.trigger_level = 1000;
+    signal_config.sampling_rate = scale_to_rate(current_scale_index);
+    signal_config.auto_speed = 0.005f;  // Default auto_speed value
 
     sigscoper.begin();
 }
@@ -42,11 +45,22 @@ void OscilloscopeRoot::drawGraph() {
     }
 
     display->setCursor(0, 0);
-    display->printf("%.1f %.1f %.1f %.1f Hz", 
+    display->printf("%.1f %.1f ", 
         std::min(std::max(-9.0, stats.min_value / 1000.0), 9.0),
-        std::min(std::max(-9.0, stats.avg_value / 1000.0), 9.0),
-        std::min(std::max(-9.0, stats.max_value / 1000.0), 9.0),
-        stats.frequency
+        std::min(std::max(-9.0, stats.max_value / 1000.0), 9.0)
+    );
+
+    if(stats.frequency >= 1000) {
+        display->printf("%.1f kHz ", stats.frequency / 1000.0);
+    } else {
+        display->printf("%.0f Hz ", stats.frequency);
+    }
+
+    display->printf("%.0f %s/d",
+        time_scales[current_scale_index] >= 1.0
+            ? time_scales[current_scale_index]
+            : time_scales[current_scale_index] * 1000.0,
+        time_scales[current_scale_index] >= 1.0 ? "ms" : "us"
     );
 
     int graph_y = 40;
@@ -63,6 +77,7 @@ void OscilloscopeRoot::drawGraph() {
         }
     }
 
+    
     // Draw trigger level using dotted line
     int trigger_level =
         map(sigscoper.get_trigger_threshold(), 400, 2400, 64, 10);
@@ -70,16 +85,12 @@ void OscilloscopeRoot::drawGraph() {
         display->drawPixel(i, trigger_level, SSD1306_WHITE);
     }
 
+    /*
     // Draw trigger position using dotted line
     for(int i = 10; i < SCREEN_HEIGHT; i += 2) {
         display->drawPixel(SCREEN_WIDTH / 2, i, SSD1306_WHITE);
     }
-    
-    display->setCursor(0, SCREEN_HEIGHT - 10);
-    display->printf("%.2f ms/div %d Hz",
-        time_scales[current_scale_index],
-        scale_to_rate(current_scale_index)
-    );
+    */
 
     const int midY = SCREEN_HEIGHT / 2;
 
@@ -142,7 +153,7 @@ void OscilloscopeRoot::update(Event* event) {
         
         // save last trigger level
         signal_config.trigger_level = sigscoper.get_trigger_threshold();
-        
+
         sigscoper.stop();
         sigscoper.start(signal_config);
     }
