@@ -23,71 +23,6 @@ OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) 
 }
 
 void OscilloscopeRoot::drawGraph() {
-    /*
-    int tickOffset = 0;
-    const int height = display->height();
-    const int fullWidth = display->width();
-    // Fix the drawing width to 125 pixels
-    const int width = 125;
-    const int midY = height / 2;
-
-    // Draw scrolling dotted line at the middle (y = 0)
-    for (int x = width - tickOffset; x >= 0; x -= 4) {
-        display->drawPixel(x, midY, SSD1306_WHITE);
-    }
-    // Draw dots to the right of the starting point too
-    for (int x = width - tickOffset + 4; x < width; x += 4) {
-        display->drawPixel(x, midY, SSD1306_WHITE);
-    }
-    
-    // Draw scrolling tick marks on the x-axis every 25 pixels (changed from 32)
-    const int TICK_SPACING = 25;
-    const int TICK_SIZE = 6; // 6 pixels tall (3 above, 3 below)
-    
-    // Draw ticks at positions that scroll with the signal
-    for (int x = width - tickOffset; x >= 0; x -= TICK_SPACING) {
-        for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
-            display->drawPixel(x, y, SSD1306_WHITE);
-        }
-    }
-    
-    // Also draw ticks to the right of the starting point
-    for (int x = width - tickOffset + TICK_SPACING; x < width; x += TICK_SPACING) {
-        for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
-            display->drawPixel(x, y, SSD1306_WHITE);
-        }
-    }
-    
-    // Show current time scale in the label
-    
-    
-    // Handle scales less than 1ms or greater than 1000ms
-    if (time_scales[current_scale_index] < 1) {
-        // Convert to μs
-        time_label = String(time_scales[current_scale_index] * 1000, 0) + "us/div";
-    } else if (time_scales[current_scale_index] >= 1000) {
-        // Convert to seconds
-        time_label = String(time_scales[current_scale_index] / 1000.0, 1) + "s/div";
-    }
-    
-    // Draw label with inverted colors (white background, black text)
-    const int LABEL_WIDTH = 74;  // Adjusted width for decimation info
-    const int LABEL_HEIGHT = 8;  // Standard text height
-    const int LABEL_X = 2;       // Left margin
-    const int LABEL_Y = 2;       // Top margin
-    
-    // Draw white background rectangle
-    display->fillRect(LABEL_X, LABEL_Y, LABEL_WIDTH, LABEL_HEIGHT, SSD1306_WHITE);
-    
-    // Draw text in black
-    display->setTextColor(SSD1306_BLACK);
-    display->setTextSize(1);
-    display->setCursor(LABEL_X + 2, LABEL_Y);
-    display->print(time_label);
-    
-    // Reset text color to white for any future drawing
-    display->setTextColor(SSD1306_WHITE);
-    */
     const int TICK_SIZE = 6; // 6 pixels tall (3 above, 3 below)
 
     static uint32_t last_trigger_wait = millis();
@@ -96,7 +31,9 @@ void OscilloscopeRoot::drawGraph() {
         last_trigger_wait = millis();
     }
 
-    if(millis() - last_trigger_wait > 1000 || sigscoper.is_ready() || true) {
+    if(millis() - last_trigger_wait > 1000
+        || sigscoper.is_ready()
+        || is_rolling(current_scale_index)) {
         sigscoper.get_stats(0, &stats);
         size_t _pos = 0;
         sigscoper.get_buffer(0, SCREEN_WIDTH, signal_buffer, &_pos);
@@ -144,13 +81,18 @@ void OscilloscopeRoot::drawGraph() {
         scale_to_rate(current_scale_index)
     );
 
+    const int midY = SCREEN_HEIGHT / 2;
+
     if(!is_rolling(current_scale_index)) {
-        const int midY = SCREEN_HEIGHT / 2;
         for (int x = SCREEN_WIDTH - 2; x >= 0; x -= TICK_SPACING) {
             for (int y = midY - TICK_SIZE/2; y <= midY + TICK_SIZE/2; y++) {
                 display->drawPixel(x, y, SSD1306_WHITE);
             }
         }
+    }
+
+    for (int x = SCREEN_WIDTH - tickOffset; x >= 0; x -= 4) {
+        display->drawPixel(x, midY, SSD1306_WHITE);
     }
 }
 
@@ -197,6 +139,10 @@ void OscilloscopeRoot::update(Event* event) {
         signal_config.trigger_mode = is_rolling(current_scale_index)
             ? TriggerMode::FREE
             : TriggerMode::AUTO_RISE;
+        
+        // save last trigger level
+        signal_config.trigger_level = sigscoper.get_trigger_threshold();
+        
         sigscoper.stop();
         sigscoper.start(signal_config);
     }
