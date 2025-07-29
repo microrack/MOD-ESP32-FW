@@ -21,6 +21,7 @@ OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) 
     signal_config.trigger_level = 1000;
     signal_config.sampling_rate = scale_to_rate(current_scale_index);
     signal_config.auto_speed = 0.005f;  // Default auto_speed value
+    signal_config.buffer_size = TICK_SPACING * (SCREEN_WIDTH / TICK_SPACING);
 
     sigscoper.begin();
 }
