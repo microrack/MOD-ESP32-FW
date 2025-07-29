@@ -15,6 +15,7 @@ private:
     static const uint16_t BUFFER_SIZE = 128;
     static const uint8_t GRAPH_TRACE_WIDTH = 2; // Width of the graph trace in pixels
     uint16_t signal_buffer[BUFFER_SIZE];
+    uint16_t signal_buffer2[BUFFER_SIZE];  // Buffer for second channel
 
     const int TICK_SPACING = 25;
     size_t tickOffset = 0;

@@ -13,8 +13,10 @@ uint16_t OscilloscopeRoot::scale_to_rate(size_t scale_index) {
 }
 
 OscilloscopeRoot::OscilloscopeRoot(Display* display) : ScreenInterface(display) {
-    signal_config.channel_count = 1;
+    signal_config.channel_count = 2;
     signal_config.channels[0] = static_cast<adc_channel_t>(ADC1_GPIO36_CHANNEL);
+    signal_config.channels[1] = static_cast<adc_channel_t>(ADC1_GPIO37_CHANNEL);
+
     signal_config.trigger_mode = is_rolling(current_scale_index)
         ? TriggerMode::FREE
         : TriggerMode::AUTO_RISE;
@@ -41,6 +43,7 @@ void OscilloscopeRoot::drawGraph() {
         sigscoper.get_stats(0, &stats);
         size_t _pos = 0;
         sigscoper.get_buffer(0, SCREEN_WIDTH, signal_buffer, &_pos);
+        sigscoper.get_buffer(1, SCREEN_WIDTH, signal_buffer2, &_pos);
         sigscoper.restart();
         last_trigger_wait = 0;
     }
@@ -65,6 +68,7 @@ void OscilloscopeRoot::drawGraph() {
     );
 
     int graph_y = 40;
+    // Draw first channel (thick line - 3 pixels)
     for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
         if(signal_buffer[i] == 0) continue;
         if(signal_buffer[i + 1] == 0) continue;
@@ -75,9 +79,26 @@ void OscilloscopeRoot::drawGraph() {
             signal_buffer[i + 1], 400, 2400, SCREEN_HEIGHT - 10, 10);
         
         if (y1 >= 0 && y1 < SCREEN_HEIGHT && y2 >= 0 && y2 < SCREEN_HEIGHT) {
-            // Draw line with 2-pixel width
+            // Draw line with 3-pixel width
             display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
             display->drawLine(i, y1 + 1, i + 1, y2 + 1, SSD1306_WHITE);
+            display->drawLine(i, y1 + 2, i + 2, y2 + 2, SSD1306_WHITE);
+        }
+    }
+    
+    // Draw second channel (thin line - 1 pixel)
+    for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
+        if(signal_buffer2[i] == 0) continue;
+        if(signal_buffer2[i + 1] == 0) continue;
+        
+        int y1 = map(
+            signal_buffer2[i], 400, 2400, SCREEN_HEIGHT - 10, 10);
+        int y2 = map(
+            signal_buffer2[i + 1], 400, 2400, SCREEN_HEIGHT - 10, 10);
+        
+        if (y1 >= 0 && y1 < SCREEN_HEIGHT && y2 >= 0 && y2 < SCREEN_HEIGHT) {
+            // Draw line with 1-pixel width
+            display->drawLine(i, y1, i + 1, y2, SSD1306_WHITE);
         }
     }
 
@@ -111,6 +132,9 @@ void OscilloscopeRoot::drawGraph() {
     for (int x = SCREEN_WIDTH - tickOffset; x >= 0; x -= 4) {
         display->drawPixel(x, midY, SSD1306_WHITE);
     }
+
+    // display->setCursor(0, SCREEN_HEIGHT - 10);
+    // display->printf("%d", trigger_count);
 }
 
 void OscilloscopeRoot::enter() {
