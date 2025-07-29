@@ -66,6 +66,9 @@ void OscilloscopeRoot::drawGraph() {
 
     int graph_y = 40;
     for (int i = 1; i < SCREEN_WIDTH - 2; i++) {
+        if(signal_buffer[i] == 0) continue;
+        if(signal_buffer[i + 1] == 0) continue;
+        
         int y1 = map(
             signal_buffer[i], 400, 2400, SCREEN_HEIGHT - 10, 10);
         int y2 = map(
@@ -79,19 +82,21 @@ void OscilloscopeRoot::drawGraph() {
     }
 
     
+    /*
     // Draw trigger level using dotted line
     int trigger_level =
         map(sigscoper.get_trigger_threshold(), 400, 2400, 64, 10);
     for(int i = 0; i < SCREEN_WIDTH; i += 2) {
         display->drawPixel(i, trigger_level, SSD1306_WHITE);
     }
+    // */
 
     /*
     // Draw trigger position using dotted line
     for(int i = 10; i < SCREEN_HEIGHT; i += 2) {
         display->drawPixel(SCREEN_WIDTH / 2, i, SSD1306_WHITE);
     }
-    */
+    // */
 
     const int midY = SCREEN_HEIGHT / 2;
 
