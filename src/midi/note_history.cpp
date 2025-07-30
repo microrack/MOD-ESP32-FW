@@ -1,7 +1,6 @@
 #include "note_history.h"
 
-void NoteHistory::Note::reset(void)
-{
+void NoteHistory::Note::reset(void) {
     prev = NO_NOTE;
     next = NO_NOTE;
     in_use = false;
@@ -19,7 +18,7 @@ bool NoteHistory::push(uint8_t note) {
     return true;
 }
 
-bool NoteHistory::pop(uint8_t note, uint8_t & prev_note) {
+bool NoteHistory::pop(uint8_t note, uint8_t& prev_note) {
     if (!history[note].in_use)
         return false;
 

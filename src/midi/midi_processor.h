@@ -32,7 +32,6 @@ private:
     static void midi_task(void* parameter);
 
     inline bool is_channel_match(uint8_t channel) const {
-        return (state->get_midi_channel() == channel) ||
-               (state->get_midi_channel() == MidiChannelAll);
+        return (state->get_midi_channel() == channel) || (state->get_midi_channel() == MidiChannelAll);
     }
 };

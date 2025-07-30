@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../urack_types.h"
 #include "../screen_switcher.h"
+#include "../urack_types.h"
 #include "midi_settings_state.h"
 
 class MidiSettingsState;
@@ -14,14 +14,7 @@ public:
     void update(Event* event) override;
 
 private:
-    enum MenuItems {
-        MENU_CHANNEL,
-        MENU_OUT_A,
-        MENU_OUT_B,
-        MENU_OUT_C,
-        MENU_CLOCK,
-        MENU_COUNT
-    };
+    enum MenuItems { MENU_CHANNEL, MENU_OUT_A, MENU_OUT_B, MENU_OUT_C, MENU_CLOCK, MENU_COUNT };
 
     MidiSettingsState* state;
     MenuItems current_item;

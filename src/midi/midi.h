@@ -2,12 +2,12 @@
 
 #include <MIDI.h>
 #include "../board.h"
-#include "../urack_types.h"
 #include "../screen_switcher.h"
+#include "../urack_types.h"
 #include "midi_info.h"
+#include "midi_processor.h"
 #include "midi_settings.h"
 #include "midi_settings_state.h"
-#include "midi_processor.h"
 
 class MidiRoot : public ScreenInterface {
 public:
