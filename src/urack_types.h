@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
+#include <stdint.h>
 #include "input/input.h"
 
 typedef Adafruit_SSD1306 Display;
@@ -20,6 +20,7 @@ public:
 
     // Called to update the screen state based on events
     virtual void update(Event* event) = 0;
+
 protected:
     Display* display;
 };
