@@ -39,20 +39,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Create firmware info
+    - name: Copy firmware to web directory
       run: |
-        echo "{\"version\": \"${{ github.ref_name }}\", \"date\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"firmware_url\": \"https://github.com/${{ github.repository }}/releases/latest/download/firmware.bin\"}" > web/firmware-info.json
-        
-    - name: Commit firmware info to master branch
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-        git fetch origin master
-        git checkout master
-        git add web/firmware-info.json
-        git commit -m "Update firmware info for ${{ github.ref_name }}" || exit 0
-        git push origin master
+        cp .pio/build/esp32dev/firmware.bin web/firmware.bin
+        sed -i "s/Version: <span id=\"firmwareVersion\">.*<\/span>/Version: <span id=\"firmwareVersion\">${{ github.ref_name }}<\/span>/" web/index.html
         
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
