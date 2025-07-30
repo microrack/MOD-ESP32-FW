@@ -1,5 +1,5 @@
-#include <EEPROM.h>
 #include "midi_settings_state.h"
+#include <EEPROM.h>
 
 MidiSettingsState::MidiSettingsState(void) {
     // Initialize mutex to nullptr
@@ -174,11 +174,16 @@ const char* MidiSettingsState::midi_channel_to_string(MidiChannel ch) {
 
 const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
     switch (type) {
-        case MidiOutGate:        return "gate";
-        case MidiOutPitch:       return "pitch";
-        case MidiOutVelocity:    return "velocity";
-        case MidiOutAfterTouch:  return "aftertouch";
-        case MidiOutPitchBend:   return "pitchbend";
+        case MidiOutGate:
+            return "gate";
+        case MidiOutPitch:
+            return "pitch";
+        case MidiOutVelocity:
+            return "velocity";
+        case MidiOutAfterTouch:
+            return "aftertouch";
+        case MidiOutPitchBend:
+            return "pitchbend";
         default:
             if (type >= MidiOutCc0 && type <= MidiOutCc127) {
                 static char buf[8];
@@ -192,9 +197,12 @@ const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
 
 const char* MidiSettingsState::midi_clk_type_to_string(MidiClkType type) {
     switch (type) {
-        case MidiClkInt: return "int";
-        case MidiClkExt: return "ext";
-        default: return "unknown";
+        case MidiClkInt:
+            return "int";
+        case MidiClkExt:
+            return "ext";
+        default:
+            return "unknown";
     }
 }
 
