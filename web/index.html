@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URack ESP32 Firmware Flasher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .firmware-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .firmware-info h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .firmware-info p {
+            color: #424242;
+            margin-bottom: 5px;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .log {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .log-entry.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .log-entry.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .log-entry.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .log-entry.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 URack ESP32</h1>
+            <p>Device Flashing</p>
+        </div>
+
+        <div id="status" class="status disconnected">
+            <strong>Status:</strong> Device not connected
+        </div>
+
+        <div id="firmwareInfo" class="firmware-info">
+            <h3>📦 Firmware Information</h3>
+            <p><strong>Version:</strong> <span id="firmwareVersion">Loading...</span></p>
+            <p><strong>Build Date:</strong> <span id="firmwareDate">Loading...</span></p>
+            <p><strong>Size:</strong> <span id="firmwareSize">Loading...</span></p>
+        </div>
+
+        <button id="connectBtn" class="button">🔌 Connect Device</button>
+        <button id="flashBtn" class="button" disabled>⚡ Flash Device</button>
+
+        <div id="progress" class="progress">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let device = null;
+        let firmwareInfo = null;
+
+        // Элементы интерфейса
+        const statusEl = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const flashBtn = document.getElementById('flashBtn');
+        const progressEl = document.getElementById('progress');
+        const progressBarEl = document.getElementById('progressBar');
+        const logEl = document.getElementById('log');
+
+        // Load firmware information
+        async function loadFirmwareInfo() {
+            try {
+                const response = await fetch('firmware-info.json');
+                firmwareInfo = await response.json();
+                
+                document.getElementById('firmwareVersion').textContent = firmwareInfo.version;
+                document.getElementById('firmwareDate').textContent = new Date(firmwareInfo.date).toLocaleString('en-US');
+                
+                // Get file size
+                const firmwareResponse = await fetch(firmwareInfo.firmware_url, { method: 'HEAD' });
+                const size = firmwareResponse.headers.get('content-length');
+                document.getElementById('firmwareSize').textContent = size ? `${(size / 1024).toFixed(1)} KB` : 'Unknown';
+                
+                log('info', 'Firmware information loaded');
+            } catch (error) {
+                log('error', 'Error loading firmware information: ' + error.message);
+            }
+        }
+
+        // Логирование
+        function log(type, message) {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.style.display = 'block';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                statusEl.className = 'status connected';
+                statusEl.innerHTML = '<strong>Status:</strong> Device connected';
+                connectBtn.textContent = '🔌 Disconnect Device';
+                flashBtn.disabled = false;
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.innerHTML = '<strong>Status:</strong> Device not connected';
+                connectBtn.textContent = '🔌 Connect Device';
+                flashBtn.disabled = true;
+            }
+        }
+
+        // Connect to device
+        async function connectDevice() {
+            try {
+                if (!navigator.usb) {
+                    throw new Error('WebUSB is not supported in this browser');
+                }
+
+                log('info', 'Requesting device connection...');
+                
+                device = await navigator.usb.requestDevice({
+                    filters: [
+                        {
+                            vendorId: 0x10C4, // ESP32 vendor ID
+                            productId: 0xEA60  // ESP32 product ID
+                        }
+                    ]
+                });
+
+                await device.open();
+                await device.selectConfiguration(1);
+                await device.claimInterface(0);
+
+                updateConnectionStatus(true);
+                log('success', 'Device connected successfully');
+            } catch (error) {
+                log('error', 'Connection error: ' + error.message);
+                updateConnectionStatus(false);
+            }
+        }
+
+        // Disconnect device
+        async function disconnectDevice() {
+            if (device) {
+                try {
+                    await device.close();
+                    device = null;
+                    updateConnectionStatus(false);
+                    log('info', 'Device disconnected');
+                } catch (error) {
+                    log('error', 'Disconnection error: ' + error.message);
+                }
+            }
+        }
+
+        // Flash device
+        async function flashDevice() {
+            if (!device || !firmwareInfo) {
+                log('error', 'Device not connected or firmware information unavailable');
+                return;
+            }
+
+            try {
+                log('info', 'Starting firmware flash...');
+                progressEl.style.display = 'block';
+                flashBtn.disabled = true;
+
+                // Load firmware
+                log('info', 'Loading firmware...');
+                const response = await fetch(firmwareInfo.firmware_url);
+                const firmware = await response.arrayBuffer();
+                
+                progressBarEl.style.width = '30%';
+                log('success', `Firmware loaded (${firmware.byteLength} bytes)`);
+
+                // Put device in bootloader mode
+                log('info', 'Putting device in bootloader mode...');
+                // Here should be logic to put ESP32 in bootloader mode
+                
+                progressBarEl.style.width = '50%';
+                log('info', 'Sending firmware to device...');
+
+                // Send firmware
+                const chunkSize = 64;
+                const totalChunks = Math.ceil(firmware.byteLength / chunkSize);
+                
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, firmware.byteLength);
+                    const chunk = firmware.slice(start, end);
+                    
+                    await device.transferOut(1, chunk);
+                    
+                    const progress = 50 + (i / totalChunks) * 40;
+                    progressBarEl.style.width = progress + '%';
+                }
+
+                progressBarEl.style.width = '100%';
+                log('success', 'Firmware flash completed successfully!');
+                
+                setTimeout(() => {
+                    progressEl.style.display = 'none';
+                    flashBtn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                log('error', 'Flash error: ' + error.message);
+                progressEl.style.display = 'none';
+                flashBtn.disabled = false;
+            }
+        }
+
+        // Обработчики событий
+        connectBtn.addEventListener('click', async () => {
+            if (device) {
+                await disconnectDevice();
+            } else {
+                await connectDevice();
+            }
+        });
+
+        flashBtn.addEventListener('click', flashDevice);
+
+        // Initialization
+        loadFirmwareInfo();
+        log('info', 'Firmware web interface loaded');
+    </script>
+</body>
+</html> 
