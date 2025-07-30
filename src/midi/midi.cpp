@@ -1,11 +1,7 @@
 #include "midi.h"
 
 MidiRoot::MidiRoot(Display* display)
-    : ScreenInterface(display),
-      midi_info(display, &state),
-      midi_settings(display, &state),
-      processor(&state) {
-
+    : ScreenInterface(display), midi_info(display, &state), midi_settings(display, &state), processor(&state) {
     // Initialize MIDI screens array
     midi_screens[0] = &midi_info;
     midi_screens[1] = &midi_settings;
@@ -29,7 +25,8 @@ void MidiRoot::exit() {
 }
 
 void MidiRoot::update(Event* event) {
-    if (event == nullptr) return;
+    if (event == nullptr)
+        return;
 
     // Handle encoder changes
     if (event->encoder != 0) {

@@ -1,15 +1,15 @@
+#include <Adafruit_GFX.h>
+#include <Adafruit_NeoPixel.h>
+#include <Adafruit_SSD1306.h>
 #include <Arduino.h>
-#include <cstdint>
+#include <EEPROM.h>
 #include <SPI.h>
 #include <Wire.h>
-#include <EEPROM.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_NeoPixel.h>
+#include <cstdint>
 #include "board.h"
 #include "input/input.h"
-#include "oscilloscope/oscilloscope.h"
 #include "midi/midi.h"
+#include "oscilloscope/oscilloscope.h"
 #include "screen_switcher.h"
 
 // Create display object
@@ -37,9 +37,10 @@ void setup() {
     Serial.printf("setup\n");
 
     // Initialize display
-    if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
         Serial.println(F("SSD1306 allocation failed"));
-        for(;;);
+        for (;;)
+            ;
     }
     display.setRotation(2);
     display.clearDisplay();

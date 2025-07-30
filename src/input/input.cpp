@@ -18,7 +18,7 @@ Input::Input() {
     button_sw_pressed = false;
     button_a_press_time = 0;
     button_sw_press_time = 0;
-    
+
     // Initialize debounce variables
     last_button_a_state = HIGH;  // Pullup, so HIGH when not pressed
     last_button_sw_state = HIGH;
@@ -28,7 +28,7 @@ Input::Input() {
 
 Event Input::get_inputs() {
     Event event = {0, ButtonNone, ButtonNone, 0, 0};
-    
+
     unsigned long current_time = millis();
 
     // Get encoder value
@@ -40,17 +40,15 @@ Event Input::get_inputs() {
     // Read button states
     int button_a_reading = digitalRead(BUTTON_A);
     int button_sw_reading = digitalRead(ENCODER_SW);
-    
+
     // Handle Button A with immediate events but debounce inhibition
-    if (button_a_reading != last_button_a_state && 
-        (current_time - last_button_a_change_time) > DEBOUNCE_TIME) {
-        
+    if (button_a_reading != last_button_a_state && (current_time - last_button_a_change_time) > DEBOUNCE_TIME) {
         // State changed and debounce period passed since last change
         last_button_a_change_time = current_time;
         last_button_a_state = button_a_reading;
-        
-        bool button_a_state = (button_a_reading == LOW); // LOW means pressed (pull-up)
-        
+
+        bool button_a_state = (button_a_reading == LOW);  // LOW means pressed (pull-up)
+
         if (button_a_state && !button_a_pressed) {
             event.button_a = ButtonPress;
             button_a_pressed = true;
@@ -65,17 +63,15 @@ Event Input::get_inputs() {
         event.button_a = ButtonHold;
         event.button_a_ms = current_time - button_a_press_time;
     }
-    
+
     // Handle Encoder Switch with immediate events but debounce inhibition
-    if (button_sw_reading != last_button_sw_state && 
-        (current_time - last_button_sw_change_time) > DEBOUNCE_TIME) {
-        
+    if (button_sw_reading != last_button_sw_state && (current_time - last_button_sw_change_time) > DEBOUNCE_TIME) {
         // State changed and debounce period passed since last change
         last_button_sw_change_time = current_time;
         last_button_sw_state = button_sw_reading;
-        
-        bool button_sw_state = (button_sw_reading == LOW); // LOW means pressed (pull-up)
-        
+
+        bool button_sw_state = (button_sw_reading == LOW);  // LOW means pressed (pull-up)
+
         if (button_sw_state && !button_sw_pressed) {
             event.button_sw = ButtonPress;
             button_sw_pressed = true;
