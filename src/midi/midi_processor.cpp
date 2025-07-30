@@ -43,13 +43,10 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
 
     processor = this;
 
-    // Initialize PWM
-    ledcSetup(PWM_0, PWM_FREQ, PWM_RESOLUTION);
-    ledcSetup(PWM_1, PWM_FREQ, PWM_RESOLUTION);
-    ledcSetup(PWM_2, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttachPin(PWM_0_PIN, PWM_0);
-    ledcAttachPin(PWM_1_PIN, PWM_1);
-    ledcAttachPin(PWM_2_PIN, PWM_2);
+    // Initialize PWM using new ESP32 Arduino 3.0 API
+    ledcAttach(PWM_0_PIN, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttach(PWM_1_PIN, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttach(PWM_2_PIN, PWM_FREQ, PWM_RESOLUTION);
 
     // Initialize MIDI
     Serial2.begin(MIDI_BAUDRATE, SERIAL_8N1, MIDI_RX_PIN, MIDI_TX_PIN);
@@ -63,36 +60,95 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     MIDI.setHandleClock(::handle_clock);
     MIDI.setHandleStart(::handle_start);
     MIDI.setHandleStop(::handle_stop);
+
+    // Initialize task handle to nullptr
+    midi_task_handle = nullptr;
+}
+
+void MidiProcessor::begin(void) {
+    // Create MIDI task on second core
+    xTaskCreatePinnedToCore(
+        midi_task,
+        "MIDI_Task",
+        4096,
+        this,
+        1,
+        &midi_task_handle,
+        1  // Core 1 (second core)
+    );
+}
+
+void MidiProcessor::midi_task(void* parameter) {
+    MidiProcessor* processor = static_cast<MidiProcessor*>(parameter);
+    
+    while (true) {
+        MIDI.read();
+        vTaskDelay(pdMS_TO_TICKS(2));  // 2ms delay
+    }
 }
 
 void MidiProcessor::out_pitch(int ch, int note)
 {
+    Serial.printf("out_pitch: %d, %d\n", ch, note);
+
     int v = V_NOTE * note;
     if (v > int(PWM_MAX_VAL))
         return;
 
-    ledcWrite(ch, v);
+    // Map channel to pin for new LEDC API
+    int pin;
+    switch(ch) {
+        case 0: pin = PWM_0_PIN; break;
+        case 1: pin = PWM_1_PIN; break;
+        case 2: pin = PWM_2_PIN; break;
+        default: return;
+    }
+    ledcWrite(pin, v);
 }
 
 void MidiProcessor::out_7bit_value(int pwm_ch, int value)
 {
+    Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
+    
     const int BITS = 7;
     const int SHIFT = PWM_RESOLUTION - BITS;
 
     int v = value << SHIFT;
-    ledcWrite(pwm_ch, v);
+    
+    // Map channel to pin for new LEDC API
+    int pin;
+    switch(pwm_ch) {
+        case 0: pin = PWM_0_PIN; break;
+        case 1: pin = PWM_1_PIN; break;
+        case 2: pin = PWM_2_PIN; break;
+        default: return;
+    }
+    ledcWrite(pin, v);
 }
 
 void MidiProcessor::out_gate(int pwm_ch, int velocity)
 {
+    Serial.printf("out_gate: %d, %d\n", pwm_ch, velocity);
+
+    // Map channel to pin for new LEDC API
+    int pin;
+    switch(pwm_ch) {
+        case 0: pin = PWM_0_PIN; break;
+        case 1: pin = PWM_1_PIN; break;
+        case 2: pin = PWM_2_PIN; break;
+        default: return;
+    }
+    
     if (velocity == 0) {
-        ledcWrite(pwm_ch, 0);
+        ledcWrite(pin, 0);
     } else {
-        ledcWrite(pwm_ch, PWM_MAX_VAL);
+        ledcWrite(pin, PWM_MAX_VAL);
     }
 }
 
 void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
+    Serial.printf("handle_note_on: %d, %d, %d\n", channel, note, velocity);
+    
     if (!is_channel_match(channel)) return;
 
     if (velocity == 0) {
@@ -120,6 +176,8 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
 }
 
 void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
+    Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
+    
     if (!is_channel_match(channel)) return;
 
     uint8_t prev_note;
