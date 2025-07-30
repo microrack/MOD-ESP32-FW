@@ -42,7 +42,7 @@ Event Input::get_inputs() {
     int button_sw_reading = digitalRead(ENCODER_SW);
     
     // Handle Button A with immediate events but debounce inhibition
-    if (button_a_reading != last_button_a_state && 
+    if (button_a_reading != last_button_a_state &&  
         (current_time - last_button_a_change_time) > DEBOUNCE_TIME) {
         
         // State changed and debounce period passed since last change

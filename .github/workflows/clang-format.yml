@@ -44,6 +44,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y clang-format-14
+        clang-format-14 --version
+        echo "=== Current .clang-format file ==="
+        cat .clang-format
+        echo "=== Test formatting ==="
+        clang-format-14 -style=file src/input/input.cpp | head -30
 
     - name: Check formatting
       id: format-check
