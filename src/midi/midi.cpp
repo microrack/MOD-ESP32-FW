@@ -14,6 +14,12 @@ MidiRoot::MidiRoot(Display* display)
     screen_switcher = ScreenSwitcher(midi_screens, 2);
 }
 
+void MidiRoot::begin(void) {
+    // Initialize all MIDI components
+    state.begin();
+    processor.begin();
+}
+
 void MidiRoot::enter() {
     screen_switcher.set_screen(0);
 }

@@ -34,6 +34,8 @@ void setup() {
     // Initialize serial
     Serial.begin(SERIAL_BAUDRATE);
 
+    Serial.printf("setup\n");
+
     // Initialize display
     if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
         Serial.println(F("SSD1306 allocation failed"));
@@ -57,6 +59,9 @@ void setup() {
     pixels.setBrightness(50);
     pixels.setPixelColor(0, pixels.Color(0, 0, 255));
     pixels.show();
+
+    // Initialize MIDI screen components
+    midi_screen.begin();
 
     screen_switcher.set_screen(0);
 }
