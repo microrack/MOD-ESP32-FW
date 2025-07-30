@@ -5,7 +5,6 @@ MidiRoot::MidiRoot(Display* display)
       midi_info(display, &state),
       midi_settings(display, &state),
       processor(&state) {
-
     // Initialize MIDI screens array
     midi_screens[0] = &midi_info;
     midi_screens[1] = &midi_settings;
@@ -36,7 +35,8 @@ void MidiRoot::update(Event* event) {
         // Pass to current screen
     }
 
-    // Handle button events - specifically switch screens on button_sw press
+    // Handle button events - specifically switch screens on button_sw
+    // press
     switch (event->button_a) {
         case ButtonPress:
             // Switch to next MIDI screen

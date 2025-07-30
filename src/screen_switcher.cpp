@@ -1,12 +1,11 @@
 #include "screen_switcher.h"
 
 ScreenSwitcher::ScreenSwitcher()
-    : screens(nullptr), screen_count(0), current_index(0) {
-}
+    : screens(nullptr), screen_count(0), current_index(0) {}
 
-ScreenSwitcher::ScreenSwitcher(ScreenInterface** screens, size_t screen_count)
-    : screens(screens), screen_count(screen_count), current_index(0) {
-}
+ScreenSwitcher::ScreenSwitcher(ScreenInterface** screens,
+                               size_t screen_count)
+    : screens(screens), screen_count(screen_count), current_index(0) {}
 
 size_t ScreenSwitcher::get_current() const {
     return current_index;

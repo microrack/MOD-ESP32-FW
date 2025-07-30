@@ -1,5 +1,5 @@
-#include <MIDI.h>
 #include "midi_processor.h"
+#include <MIDI.h>
 
 // MIDI interface
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
@@ -38,9 +38,7 @@ void handle_stop(void) {
     processor->handle_stop();
 }
 
-MidiProcessor::MidiProcessor(MidiSettingsState* state)
-    : state(state) {
-
+MidiProcessor::MidiProcessor(MidiSettingsState* state) : state(state) {
     processor = this;
 
     // Initialize PWM using new ESP32 Arduino 3.0 API
@@ -67,78 +65,90 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
 
 void MidiProcessor::begin(void) {
     // Create MIDI task on second core
-    xTaskCreatePinnedToCore(
-        midi_task,
-        "MIDI_Task",
-        4096,
-        this,
-        1,
-        &midi_task_handle,
-        1  // Core 1 (second core)
+    xTaskCreatePinnedToCore(midi_task, "MIDI_Task", 4096, this, 1,
+                            &midi_task_handle,
+                            1  // Core 1 (second core)
     );
 }
 
 void MidiProcessor::midi_task(void* parameter) {
     MidiProcessor* processor = static_cast<MidiProcessor*>(parameter);
-    
+
     while (true) {
         MIDI.read();
         vTaskDelay(pdMS_TO_TICKS(2));  // 2ms delay
     }
 }
 
-void MidiProcessor::out_pitch(int ch, int note)
-{
+void MidiProcessor::out_pitch(int ch, int note) {
     Serial.printf("out_pitch: %d, %d\n", ch, note);
 
     int v = V_NOTE * note;
-    if (v > int(PWM_MAX_VAL))
-        return;
+    if (v > int(PWM_MAX_VAL)) return;
 
     // Map channel to pin for new LEDC API
     int pin;
-    switch(ch) {
-        case 0: pin = PWM_0_PIN; break;
-        case 1: pin = PWM_1_PIN; break;
-        case 2: pin = PWM_2_PIN; break;
-        default: return;
+    switch (ch) {
+        case 0:
+            pin = PWM_0_PIN;
+            break;
+        case 1:
+            pin = PWM_1_PIN;
+            break;
+        case 2:
+            pin = PWM_2_PIN;
+            break;
+        default:
+            return;
     }
     ledcWrite(pin, v);
 }
 
-void MidiProcessor::out_7bit_value(int pwm_ch, int value)
-{
+void MidiProcessor::out_7bit_value(int pwm_ch, int value) {
     Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
-    
+
     const int BITS = 7;
     const int SHIFT = PWM_RESOLUTION - BITS;
 
     int v = value << SHIFT;
-    
+
     // Map channel to pin for new LEDC API
     int pin;
-    switch(pwm_ch) {
-        case 0: pin = PWM_0_PIN; break;
-        case 1: pin = PWM_1_PIN; break;
-        case 2: pin = PWM_2_PIN; break;
-        default: return;
+    switch (pwm_ch) {
+        case 0:
+            pin = PWM_0_PIN;
+            break;
+        case 1:
+            pin = PWM_1_PIN;
+            break;
+        case 2:
+            pin = PWM_2_PIN;
+            break;
+        default:
+            return;
     }
     ledcWrite(pin, v);
 }
 
-void MidiProcessor::out_gate(int pwm_ch, int velocity)
-{
+void MidiProcessor::out_gate(int pwm_ch, int velocity) {
     Serial.printf("out_gate: %d, %d\n", pwm_ch, velocity);
 
     // Map channel to pin for new LEDC API
     int pin;
-    switch(pwm_ch) {
-        case 0: pin = PWM_0_PIN; break;
-        case 1: pin = PWM_1_PIN; break;
-        case 2: pin = PWM_2_PIN; break;
-        default: return;
+    switch (pwm_ch) {
+        case 0:
+            pin = PWM_0_PIN;
+            break;
+        case 1:
+            pin = PWM_1_PIN;
+            break;
+        case 2:
+            pin = PWM_2_PIN;
+            break;
+        default:
+            return;
     }
-    
+
     if (velocity == 0) {
         ledcWrite(pin, 0);
     } else {
@@ -146,9 +156,11 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
     }
 }
 
-void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
-    Serial.printf("handle_note_on: %d, %d, %d\n", channel, note, velocity);
-    
+void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note,
+                                   uint8_t velocity) {
+    Serial.printf("handle_note_on: %d, %d, %d\n", channel, note,
+                  velocity);
+
     if (!is_channel_match(channel)) return;
 
     if (velocity == 0) {
@@ -168,17 +180,20 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
             out_pitch(i, note);
         }
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
+        if (state->get_midi_out_type(i)
+            == MidiOutType::MidiOutVelocity) {
             out_7bit_value(i, velocity);
         }
     }
 }
 
-void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
-    Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
-    
+void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note,
+                                    uint8_t velocity) {
+    Serial.printf("handle_note_off: %d, %d, %d\n", channel, note,
+                  velocity);
+
     if (!is_channel_match(channel)) return;
-    
+
     uint8_t prev_note;
     if (!note_history.pop(note, prev_note)) {
         // Note not in use. Skipping.
@@ -187,14 +202,17 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (prev_note == NoteHistory::NO_NOTE) {
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
+            if (state->get_midi_out_type(i)
+                == MidiOutType::MidiOutGate) {
                 out_gate(i, 0);
             }
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
+            if (state->get_midi_out_type(i)
+                == MidiOutType::MidiOutVelocity) {
                 out_7bit_value(i, 0);
             }
         } else {
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+            if (state->get_midi_out_type(i)
+                == MidiOutType::MidiOutPitch) {
                 // Restore previous note
                 out_pitch(i, prev_note);
             }
@@ -202,11 +220,13 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
     }
 }
 
-void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
+void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc,
+                              uint8_t value) {
     if (!is_channel_match(channel)) return;
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
+        if (state->get_midi_out_type(i)
+            == MidiOutType::MidiOutCc0 + cc) {
             out_7bit_value(i, value);
         }
     }
@@ -216,7 +236,8 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     if (!is_channel_match(channel)) return;
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
+        if (state->get_midi_out_type(i)
+            == MidiOutType::MidiOutAfterTouch) {
             out_7bit_value(i, value);
         }
     }
@@ -226,7 +247,8 @@ void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
     if (!is_channel_match(channel)) return;
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
+        if (state->get_midi_out_type(i)
+            == MidiOutType::MidiOutPitchBend) {
             // TODO: implement
         }
     }
@@ -238,10 +260,8 @@ void MidiProcessor::handle_clock(void) {
 
 void MidiProcessor::handle_start(void) {
     if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
-
 }
 
 void MidiProcessor::handle_stop(void) {
     if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
-
 }

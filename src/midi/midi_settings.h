@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../urack_types.h"
 #include "../screen_switcher.h"
+#include "../urack_types.h"
 #include "midi_settings_state.h"
 
 class MidiSettingsState;
