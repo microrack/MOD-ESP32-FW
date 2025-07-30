@@ -8,7 +8,7 @@ This document describes the code style used in the mod-esp32-fw project and the 
 
 ### 1. Indentation and Formatting
 - **Indentation**: 4 spaces (no tabs)
-- **Maximum line length**: 120 characters
+- **Maximum line length**: 72 characters
 - **Brace style**: K&R (braces attached to keywords)
 
 ### 2. Naming Conventions
@@ -215,7 +215,6 @@ void loop() {
 
 The `.clang-format` file is configured for automatic code formatting according to the described style. Main settings:
 
-- **BasedOnStyle: Google** - based on Google style
 - **IndentWidth: 4** - 4-space indentation
 - **ColumnLimit: 120** - maximum line length of 120 characters
 - **PointerAlignment: Left** - pointer asterisks attached to type

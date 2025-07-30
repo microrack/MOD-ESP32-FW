@@ -1,80 +1,29 @@
 ---
 Language: Cpp
-BasedOnStyle: Google
-# Настройки для поддержки PascalCase в перечислениях
-AccessModifierOffset: -4
-AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
-AlignEscapedNewlines: Left
-AlignOperands: true
-AlignTrailingComments: true
-AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: true
-AllowShortLoopsOnASingleLine: true
-AlwaysBreakAfterReturnType: None
-AlwaysBreakBeforeMultilineStrings: true
-AlwaysBreakTemplateDeclarations: Yes
-AlwaysBreakAfterReturnType: None
-BinPackArguments: true
-BinPackParameters: true
-BraceWrapping:
-  AfterClass: false
-  AfterControlStatement: false
-  AfterEnum: false
-  AfterFunction: false
-  AfterNamespace: false
-  AfterStruct: false
-  AfterUnion: false
-  BeforeCatch: false
-  BeforeElse: false
-  IndentBraces: false
-BreakBeforeBinaryOperators: NonAssignment
-BreakBeforeBraces: Attach
-BreakBeforeTernaryOperators: true
-BreakStringLiterals: true
-ColumnLimit: 72
-CommentPragmas: '^ IWYU pragma:'
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
-ConstructorInitializerIndentWidth: 4
-ContinuationIndentWidth: 4
-Cpp11BracedListStyle: true
-DerivePointerAlignment: false
-DisableFormat: false
-ExperimentalAutoDetectBinPacking: false
-FixNamespaceComments: true
-IncludeBlocks: Preserve
-IndentCaseLabels: true
-IndentPPDirectives: None
+BasedOnStyle: LLVM
 IndentWidth: 4
-IndentWrappedFunctionNames: false
-KeepEmptyLinesAtTheStartOfBlocks: false
-MaxEmptyLinesToKeep: 1
-NamespaceIndentation: None
-PenaltyBreakAssignment: 2
-PenaltyBreakBeforeFirstCallParameter: 1
-PenaltyBreakComment: 300
-PenaltyBreakFirstLessLess: 120
-PenaltyBreakString: 1000
-PenaltyExcessCharacter: 1000000
-PenaltyReturnTypeOnItsOwnLine: 200
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 72
+BreakBeforeBraces: Attach
 PointerAlignment: Left
-ReflowComments: true
-SortIncludes: true
-SortUsingDeclarations: true
-SpaceAfterCStyleCast: false
-SpaceAfterTemplateKeyword: true
-SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 2
-SpacesInAngles: false
-SpacesInContainerLiterals: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: Cpp11
-TabWidth: 4
-UseTab: Never 
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+--- 
