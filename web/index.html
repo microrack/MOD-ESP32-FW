@@ -205,14 +205,8 @@
         // Load firmware information
         async function loadFirmwareInfo() {
             try {
-                const response = await fetch('firmware-info.json');
-                firmwareInfo = await response.json();
-                
-                document.getElementById('firmwareVersion').textContent = firmwareInfo.version;
-                document.getElementById('firmwareDate').textContent = new Date(firmwareInfo.date).toLocaleString('en-US');
-                
-                // Get file size
-                const firmwareResponse = await fetch(firmwareInfo.firmware_url, { method: 'HEAD' });
+                // Version is already in HTML, just update size
+                const firmwareResponse = await fetch('firmware.bin', { method: 'HEAD' });
                 const size = firmwareResponse.headers.get('content-length');
                 document.getElementById('firmwareSize').textContent = size ? `${(size / 1024).toFixed(1)} KB` : 'Unknown';
                 
@@ -293,8 +287,8 @@
 
         // Flash device
         async function flashDevice() {
-            if (!device || !firmwareInfo) {
-                log('error', 'Device not connected or firmware information unavailable');
+            if (!device) {
+                log('error', 'Device not connected');
                 return;
             }
 
@@ -305,7 +299,7 @@
 
                 // Load firmware
                 log('info', 'Loading firmware...');
-                const response = await fetch(firmwareInfo.firmware_url);
+                const response = await fetch('firmware.bin');
                 const firmware = await response.arrayBuffer();
                 
                 progressBarEl.style.width = '30%';
