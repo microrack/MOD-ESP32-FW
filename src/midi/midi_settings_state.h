@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <Arduino.h>
 #include "../board.h"
 
 enum MidiClkType {
@@ -181,7 +182,9 @@ public:
     const static int MIN_MIDI_CLK_TYPE = MidiClkInt;
 
     MidiSettingsState(void);
+    ~MidiSettingsState(void);
 
+    void begin(void);
     void store(void);
     void recall(void);
 
@@ -190,15 +193,15 @@ public:
     const char* get_midi_out_type_str(size_t idx);
     const char* get_midi_clk_type_str(void);
 
-    void set_bpm(int bpm) { this->bpm = bpm; }
-    void set_midi_channel(MidiChannel ch) { this->midi_channel = ch; }
-    void set_midi_out_type(size_t idx, MidiOutType type) { this->midi_out_type[idx] = type; }
-    void set_midi_clk_type(MidiClkType type) { this->midi_clk_type = type; }
+    void set_bpm(int bpm);
+    void set_midi_channel(MidiChannel ch);
+    void set_midi_out_type(size_t idx, MidiOutType type);
+    void set_midi_clk_type(MidiClkType type);
 
-    int get_bpm(void) { return this->bpm; }
-    MidiChannel get_midi_channel(void) { return this->midi_channel; }
-    MidiOutType get_midi_out_type(size_t idx) { return this->midi_out_type[idx]; }
-    MidiClkType get_midi_clk_type(void) { return this->midi_clk_type; }
+    int get_bpm(void);
+    MidiChannel get_midi_channel(void);
+    MidiOutType get_midi_out_type(size_t idx);
+    MidiClkType get_midi_clk_type(void);
 
     int get_max_bpm(void) { return MAX_BPM; }
     int get_min_bpm(void) { return MIN_BPM; }
@@ -218,6 +221,7 @@ private:
     MidiChannel midi_channel;
     MidiOutType midi_out_type[MIDI_OUT_COUNT];
     MidiClkType midi_clk_type;
+    SemaphoreHandle_t state_mutex;
 
     const char* midi_channel_to_string(MidiChannel ch);
     const char* midi_out_type_to_string(MidiOutType type);

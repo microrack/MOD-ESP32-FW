@@ -12,6 +12,7 @@
 class MidiRoot : public ScreenInterface {
 public:
     MidiRoot(Display* display);
+    void begin(void);
     void enter() override;
     void exit() override;
     void update(Event* event) override;
