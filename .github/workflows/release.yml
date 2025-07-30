@@ -47,6 +47,8 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        git fetch origin master
         git checkout master
         git add web/firmware-info.json
         git commit -m "Update firmware info for ${{ github.ref_name }}" || exit 0
