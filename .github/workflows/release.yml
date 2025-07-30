@@ -43,9 +43,16 @@ jobs:
       run: |
         echo "{\"version\": \"${{ github.ref_name }}\", \"date\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"firmware_url\": \"https://github.com/${{ github.repository }}/releases/latest/download/firmware.bin\"}" > web/firmware-info.json
         
+    - name: Commit firmware info to main branch
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add web/firmware-info.json
+        git commit -m "Update firmware info for ${{ github.ref_name }}" || exit 0
+        git push origin main
+        
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./web
-        destination_dir: . 
+        publish_dir: ./web 
