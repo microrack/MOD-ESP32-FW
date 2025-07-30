@@ -1,14 +1,14 @@
 #pragma once
 
-#include <stdint.h>
+#include "input/input.h"
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
-#include "input/input.h"
+#include <stdint.h>
 
 typedef Adafruit_SSD1306 Display;
 
 class ScreenInterface {
-public:
+  public:
     ScreenInterface(Display* display) : display(display) {}
     virtual ~ScreenInterface() = default;
 
@@ -20,6 +20,7 @@ public:
 
     // Called to update the screen state based on events
     virtual void update(Event* event) = 0;
-protected:
+
+  protected:
     Display* display;
 };

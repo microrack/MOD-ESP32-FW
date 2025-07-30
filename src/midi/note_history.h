@@ -3,13 +3,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct NoteHistory
-{
-    static const size_t  MIDI_NOTES_COUNT = 127;
+struct NoteHistory {
+    static const size_t MIDI_NOTES_COUNT = 127;
     static const uint8_t NO_NOTE = (1 << 7);
 
-    struct Note
-    {
+    struct Note {
         uint8_t prev;
         uint8_t next;
         bool in_use;
@@ -24,7 +22,7 @@ struct NoteHistory
     int count;
 
     bool push(uint8_t note);
-    bool pop(uint8_t note, uint8_t & prev_note);
+    bool pop(uint8_t note, uint8_t& prev_note);
     bool is_in_use(uint8_t note);
     uint8_t get_prev(uint8_t note);
     uint8_t get_next(uint8_t note);

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../board.h"
+#include <Arduino.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <Arduino.h>
-#include "../board.h"
 
 enum MidiClkType {
     MidiClkInt,
@@ -11,23 +11,23 @@ enum MidiClkType {
 };
 
 enum MidiChannel {
-    MidiChannel0   = 0,
-    MidiChannel1   = 1,
-    MidiChannel2   = 2,
-    MidiChannel3   = 3,
-    MidiChannel4   = 4,
-    MidiChannel5   = 5,
-    MidiChannel6   = 6,
-    MidiChannel7   = 7,
-    MidiChannel8   = 8,
-    MidiChannel9   = 9,
-    MidiChannel10  = 10,
-    MidiChannel11  = 11,
-    MidiChannel12  = 12,
-    MidiChannel13  = 13,
-    MidiChannel14  = 14,
-    MidiChannel15  = 15,
-    MidiChannel16  = 16,
+    MidiChannel0 = 0,
+    MidiChannel1 = 1,
+    MidiChannel2 = 2,
+    MidiChannel3 = 3,
+    MidiChannel4 = 4,
+    MidiChannel5 = 5,
+    MidiChannel6 = 6,
+    MidiChannel7 = 7,
+    MidiChannel8 = 8,
+    MidiChannel9 = 9,
+    MidiChannel10 = 10,
+    MidiChannel11 = 11,
+    MidiChannel12 = 12,
+    MidiChannel13 = 13,
+    MidiChannel14 = 14,
+    MidiChannel15 = 15,
+    MidiChannel16 = 16,
     MidiChannelAll = 17
 };
 
@@ -168,7 +168,7 @@ enum MidiOutType {
 };
 
 class MidiSettingsState {
-public:
+  public:
     const static uint32_t MAGIC = 0x4D494449;
     const static uint32_t VERSION = 1;
 
@@ -214,7 +214,8 @@ public:
 
     static const size_t MIDI_OUT_COUNT = 3;
     size_t get_midi_out_count(void) { return MIDI_OUT_COUNT; }
-private:
+
+  private:
     uint32_t magic;
     uint32_t version;
     int bpm;

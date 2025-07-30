@@ -3,7 +3,7 @@
 #include "urack_types.h"
 
 class ScreenSwitcher {
-public:
+  public:
     // Default constructor
     ScreenSwitcher();
 
@@ -24,7 +24,7 @@ public:
     // Get the current screen pointer
     ScreenInterface* get_current_screen() const;
 
-private:
+  private:
     ScreenInterface** screens;
     size_t screen_count;
     size_t current_index;

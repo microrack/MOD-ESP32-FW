@@ -1,19 +1,19 @@
 #pragma once
 
-#include "../urack_types.h"
 #include "../screen_switcher.h"
+#include "../urack_types.h"
 #include "midi_settings_state.h"
 
 class MidiSettingsState;
 
 class MidiSettings : public ScreenInterface {
-public:
+  public:
     MidiSettings(Display* display, MidiSettingsState* state);
     void enter() override;
     void exit() override;
     void update(Event* event) override;
 
-private:
+  private:
     enum MenuItems {
         MENU_CHANNEL,
         MENU_OUT_A,

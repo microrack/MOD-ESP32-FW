@@ -4,14 +4,14 @@
 #include "midi_settings_state.h"
 
 class MidiInfo : public ScreenInterface {
-public:
+  public:
     MidiInfo(Display* display, MidiSettingsState* state);
 
     void enter() override;
     void exit() override;
     void update(Event* event) override;
 
-private:
+  private:
     MidiSettingsState* state;
 
     void render();

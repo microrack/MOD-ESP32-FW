@@ -1,19 +1,20 @@
-#include <Arduino.h>
-#include <cstdint>
-#include <SPI.h>
-#include <Wire.h>
-#include <EEPROM.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_NeoPixel.h>
 #include "board.h"
 #include "input/input.h"
-#include "oscilloscope/oscilloscope.h"
 #include "midi/midi.h"
+#include "oscilloscope/oscilloscope.h"
 #include "screen_switcher.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_NeoPixel.h>
+#include <Adafruit_SSD1306.h>
+#include <Arduino.h>
+#include <EEPROM.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <cstdint>
 
 // Create display object
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire,
+                         OLED_RESET);
 
 // Create input handler
 Input input_handler;
@@ -37,9 +38,10 @@ void setup() {
     Serial.printf("setup\n");
 
     // Initialize display
-    if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
         Serial.println(F("SSD1306 allocation failed"));
-        for(;;);
+        for (;;)
+            ;
     }
     display.setRotation(2);
     display.clearDisplay();
@@ -75,8 +77,10 @@ void loop() {
     // Handle screen switching with a state machine approach
     if (event.button_a == ButtonRelease) {
         screen_switched = false;
-    } else if (event.button_a == ButtonHold && event.button_a_ms > 400 && !screen_switched) {
-        // Switch screen only if the button was released before and hasn't switched screens in this hold session
+    } else if (event.button_a == ButtonHold &&
+               event.button_a_ms > 400 && !screen_switched) {
+        // Switch screen only if the button was released before and
+        // hasn't switched screens in this hold session
         screen_switcher.set_screen(screen_switcher.get_next());
         screen_switched = true;
     }

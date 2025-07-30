@@ -6,12 +6,14 @@
 #include "note_history.h"
 
 class MidiProcessor {
-public:
+  public:
     MidiProcessor(MidiSettingsState* state);
 
     void begin(void);
-    void handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity);
-    void handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity);
+    void handle_note_on(uint8_t channel, uint8_t note,
+                        uint8_t velocity);
+    void handle_note_off(uint8_t channel, uint8_t note,
+                         uint8_t velocity);
     void handle_cc(uint8_t channel, uint8_t cc, uint8_t value);
     void handle_aftertouch(uint8_t channel, uint8_t value);
     void handle_pitchbend(uint8_t channel, uint16_t value);
@@ -19,7 +21,7 @@ public:
     void handle_start(void);
     void handle_stop(void);
 
-private:
+  private:
     static const int V_NOTE = 1024 / (12 * 10);
 
     MidiSettingsState* state;
