@@ -27,7 +27,7 @@ const int MIDI_TX_PIN = 17;
 
 // PWM parameters
 const uint32_t PWM_FREQ = 78125;
-const uint8_t  PWM_RESOLUTION = 10;
+const uint8_t PWM_RESOLUTION = 10;
 const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
 
 // Debug serial configuration

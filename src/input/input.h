@@ -1,27 +1,21 @@
 #pragma once
 
-#include <stdint.h>
 #include <Arduino.h>
+#include <stdint.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcpp"
 #include <ESP32Encoder.h>
 #pragma GCC diagnostic pop
 
-typedef enum {
-    ButtonNone,
-    ButtonPress,
-    ButtonRelease,
-    ButtonHold,
-    ButtonSize
-} Button;
+typedef enum { ButtonNone, ButtonPress, ButtonRelease, ButtonHold, ButtonSize } Button;
 
 typedef struct Event {
-    int8_t encoder;    // Encoder value
-    Button button_a;   // Button A state
-    Button button_sw;  // Encoder switch state
-    uint32_t button_a_ms; // Time in ms for Button A
-    uint32_t button_sw_ms; // Time in ms for Encoder switch
+    int8_t encoder;         // Encoder value
+    Button button_a;        // Button A state
+    Button button_sw;       // Encoder switch state
+    uint32_t button_a_ms;   // Time in ms for Button A
+    uint32_t button_sw_ms;  // Time in ms for Encoder switch
 
     static void print(const Event& event);
 } Event;
@@ -43,7 +37,7 @@ private:
     uint32_t button_sw_press_time;
     bool button_a_pressed;
     bool button_sw_pressed;
-    
+
     // Debounce variables
     int last_button_a_state;
     int last_button_sw_state;
