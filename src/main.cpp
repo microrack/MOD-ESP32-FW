@@ -23,7 +23,7 @@ OscilloscopeRoot oscilloscope_screen(&display);
 MidiRoot midi_screen(&display);
 
 // Create screen array and switcher
-ScreenInterface* screens[] = {&midi_screen, &oscilloscope_screen};
+ScreenInterface* screens[] = {&oscilloscope_screen, &midi_screen};
 const size_t screen_count = sizeof(screens) / sizeof(screens[0]);
 ScreenSwitcher screen_switcher(screens, screen_count);
 
