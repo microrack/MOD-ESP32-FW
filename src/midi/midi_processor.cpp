@@ -100,8 +100,6 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
         return;
     }
 
-<<<<<<< HEAD
-
     if (!note_history.push(note)) {
         // Note already in use. Skipping.
         return;
@@ -116,7 +114,6 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
         }
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
             out_7bit_value(i, velocity);
-=======
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
 
@@ -126,15 +123,13 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
         }
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
 
->>>>>>> master
         }
     }
 }
 
 void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
     if (!is_channel_match(channel)) return;
-
-<<<<<<< HEAD
+    
     uint8_t prev_note;
     if (!note_history.pop(note, prev_note)) {
         // Note not in use. Skipping.
@@ -154,11 +149,9 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
                 // Restore previous note
                 out_pitch(i, prev_note);
             }
-=======
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
 
->>>>>>> master
         }
     }
 }
@@ -168,11 +161,7 @@ void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
-<<<<<<< HEAD
             out_7bit_value(i, value);
-=======
-
->>>>>>> master
         }
     }
 }
@@ -182,11 +171,7 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
-<<<<<<< HEAD
             out_7bit_value(i, value);
-=======
-
->>>>>>> master
         }
     }
 }
@@ -196,21 +181,13 @@ void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
 
     for (int i = 0; i < state->get_midi_out_count(); i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
-<<<<<<< HEAD
             // TODO: implement
-=======
-
->>>>>>> master
         }
     }
 }
 
 void MidiProcessor::handle_clock(void) {
-<<<<<<< HEAD
     if (state->get_midi_clk_type() != MidiClkType::MidiClkExt) return;
-
-=======
->>>>>>> master
 }
 
 void MidiProcessor::handle_start(void) {
@@ -220,5 +197,4 @@ void MidiProcessor::handle_start(void) {
 
 void MidiProcessor::handle_stop(void) {
     if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
-
 }
