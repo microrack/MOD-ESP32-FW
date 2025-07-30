@@ -1,0 +1,120 @@
+name: Clang Format Check and Fix
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - 'feature/*'
+      - 'bugfix/*'
+      - 'hotfix/*'
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'lib/**'
+      - '*.cpp'
+      - '*.h'
+      - '*.c'
+      - '.clang-format'
+  pull_request:
+    branches:
+      - master
+      - develop
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'lib/**'
+      - '*.cpp'
+      - '*.h'
+      - '*.c'
+      - '.clang-format'
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Clang Format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format-15
+
+    - name: Check formatting
+      id: format-check
+      run: |
+        # Find all C/C++ files
+        find . -name "*.cpp" -o -name "*.h" -o -name "*.c" | grep -v ".pio" | grep -v ".git" > files_to_format.txt
+        
+        # Check if there are any files to format
+        if [ ! -s files_to_format.txt ]; then
+          echo "No C/C++ files found to format"
+          echo "needs-formatting=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Create a temporary directory for formatted files
+        mkdir -p /tmp/formatted
+        
+        # Format each file and check for differences
+        needs_formatting=false
+        while IFS= read -r file; do
+          echo "Checking formatting for: $file"
+          
+          # Create formatted version
+          clang-format-15 -style=file "$file" > "/tmp/formatted/$(basename "$file")"
+          
+          # Compare with original
+          if ! diff -q "$file" "/tmp/formatted/$(basename "$file")" > /dev/null; then
+            echo "File $file needs formatting"
+            needs_formatting=true
+          fi
+        done < files_to_format.txt
+        
+        echo "needs-formatting=$needs_formatting" >> $GITHUB_OUTPUT
+        
+        if [ "$needs_formatting" = true ]; then
+          echo "Some files need formatting - will format them in next step"
+        else
+          echo "All files are properly formatted"
+        fi
+
+    - name: Format files
+      if: steps.format-check.outputs.needs-formatting == 'true'
+      run: |
+        # Format all C/C++ files
+        find . -name "*.cpp" -o -name "*.h" -o -name "*.c" | grep -v ".pio" | grep -v ".git" | while read file; do
+          echo "Formatting: $file"
+          clang-format-15 -style=file -i "$file"
+        done
+
+    - name: Create Pull Request
+      if: steps.format-check.outputs.needs-formatting == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'style: apply clang-format to source files'
+        title: 'style: apply clang-format formatting'
+        body: |
+          This PR applies clang-format formatting to source files.
+          
+          **Changes made:**
+          - Applied clang-format to all C/C++ source files
+          - Ensured consistent code formatting according to project standards
+          
+          **Files affected:**
+          - All `.cpp`, `.h`, and `.c` files in the project
+          
+          This is an automated PR created by the CI/CD pipeline.
+        branch: format/clang-format-fix-${{ github.run_number }}
+        base: ${{ github.ref_name }}
+        delete-branch: true
+        labels: |
+          automated
+          formatting
+          clang-format 
