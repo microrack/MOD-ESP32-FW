@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Firmware Flasher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .version {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .version span {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.flashing {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            min-width: 150px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .log-container {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-entry.info {
+            color: #0066cc;
+        }
+
+        .log-entry.success {
+            color: #28a745;
+        }
+
+        .log-entry.error {
+            color: #dc3545;
+        }
+
+        .log-entry.warning {
+            color: #ffc107;
+        }
+
+        .device-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .device-info h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .device-info p {
+            margin: 5px 0;
+            color: #424242;
+        }
+
+        .firmware-info {
+            background: #f3e5f5;
+            border: 1px solid #e1bee7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .firmware-info h3 {
+            color: #7b1fa2;
+            margin-bottom: 10px;
+        }
+
+        .firmware-info p {
+            margin: 5px 0;
+            color: #424242;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ESP32 Firmware Flasher</h1>
+            <div class="version">
+                Version: <span id="firmwareVersion">1.0.0</span>
+            </div>
+        </div>
+
+        <div id="status" class="status disconnected">
+            Device not connected
+        </div>
+
+        <div class="firmware-info">
+            <h3>📦 Firmware Information</h3>
+            <p><strong>File:</strong> firmware.bin</p>
+            <p><strong>Size:</strong> <span id="firmwareSize">Loading...</span></p>
+        </div>
+
+        <div id="deviceInfo" class="device-info">
+            <h3>🔌 Connected Device</h3>
+            <p><strong>Name:</strong> <span id="deviceName">-</span></p>
+            <p><strong>Serial Number:</strong> <span id="deviceSerial">-</span></p>
+        </div>
+
+        <div class="button-group">
+            <button id="connectBtn" class="button">🔌 Connect Device</button>
+            <button id="flashBtn" class="button" disabled>⚡ Flash Firmware</button>
+            <button id="disconnectBtn" class="button" disabled>❌ Disconnect</button>
+        </div>
+
+        <div id="progressContainer" class="progress-container">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="progressText" class="progress-text">0%</div>
+        </div>
+
+        <div id="logContainer" class="log-container">
+            <div id="logContent"></div>
+        </div>
+    </div>
+
+    <!-- Load esptool-js from CDN -->
+    <script type="module">
+        import * as esptooljs from 'https://unpkg.com/esptool-js@0.5.6/bundle.js';
+        
+        const ESPLoader = esptooljs.ESPLoader;
+        const Transport = esptooljs.Transport;
+        
+        window.ESPLoader = ESPLoader;
+        window.Transport = Transport;
+    </script>
+    
+    <script>
+        class ESP32Flasher {
+            constructor() {
+                this.port = null;
+                this.loader = null;
+                this.firmwareData = null;
+                this.isFlashing = false;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadFirmwareInfo();
+                this.setupTerminal();
+            }
+
+            initializeElements() {
+                this.statusEl = document.getElementById('status');
+                this.connectBtn = document.getElementById('connectBtn');
+                this.flashBtn = document.getElementById('flashBtn');
+                this.disconnectBtn = document.getElementById('disconnectBtn');
+                this.progressContainer = document.getElementById('progressContainer');
+                this.progressFill = document.getElementById('progressFill');
+                this.progressText = document.getElementById('progressText');
+                this.logContainer = document.getElementById('logContainer');
+                this.logContent = document.getElementById('logContent');
+                this.deviceInfo = document.getElementById('deviceInfo');
+                this.deviceName = document.getElementById('deviceName');
+                this.deviceSerial = document.getElementById('deviceSerial');
+                this.firmwareSize = document.getElementById('firmwareSize');
+            }
+
+            setupEventListeners() {
+                this.connectBtn.addEventListener('click', () => this.connectDevice());
+                this.flashBtn.addEventListener('click', () => this.flashFirmware());
+                this.disconnectBtn.addEventListener('click', () => this.disconnectDevice());
+            }
+
+            setupTerminal() {
+                this.terminal = {
+                    clean: () => {
+                        this.logContent.innerHTML = '';
+                        this.logContainer.style.display = 'block';
+                    },
+                    writeLine: (data) => {
+                        this.addLogEntry(data, 'info');
+                    },
+                    write: (data) => {
+                        this.addLogEntry(data, 'info');
+                    }
+                };
+            }
+
+            addLogEntry(message, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = typeof message === 'string' ? message : JSON.stringify(message);
+                this.logContent.appendChild(entry);
+                this.logContent.scrollTop = this.logContent.scrollHeight;
+                
+                // Force show log container
+                this.logContainer.style.display = 'block';
+            }
+
+            updateStatus(message, type) {
+                this.statusEl.textContent = message;
+                this.statusEl.className = `status ${type}`;
+            }
+
+            updateProgress(percent, text) {
+                this.progressFill.style.width = `${percent}%`;
+                this.progressText.textContent = text || `${percent}%`;
+            }
+
+            async loadFirmwareInfo() {
+                try {
+                    this.firmwareData = await this.getImageData('firmware.bin');
+                    this.firmwareSize.textContent = this.formatBytes(this.firmwareData.length);
+                } catch (error) {
+                    this.addLogEntry(`Error loading firmware: ${error.message}`, 'error');
+                    this.firmwareSize.textContent = 'Error loading firmware';
+                }
+            }
+
+            async getImageData(fileURL) {
+                const response = await fetch(fileURL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                // Convert to string in chunks to avoid stack overflow
+                let result = '';
+                const chunkSize = 8192;
+                for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                    const chunk = uint8Array.slice(i, i + chunkSize);
+                    result += String.fromCharCode.apply(null, chunk);
+                }
+                return result;
+            }
+
+            formatBytes(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            async connectDevice() {
+                try {
+                    this.addLogEntry('Requesting device access...', 'info');
+                    
+                    this.port = await navigator.serial.requestPort({
+                        filters: [
+                            { usbVendorId: 0x10C4 }, // ESP32 common vendor ID
+                            { usbVendorId: 0x1A86 }, // CH340
+                            { usbVendorId: 0x0403 }, // FTDI
+                            { usbVendorId: 0x303A }, // ESP32-S3
+                            { usbVendorId: 0x2341 }, // Arduino
+                        ]
+                    });
+
+                    if (!this.port) {
+                        throw new Error('No port selected');
+                    }
+                    
+                    await this.port.open({ baudRate: 115200 });
+                    await this.port.close();
+                    
+                    // Create transport
+                    this.transport = new window.Transport(this.port);
+                    
+                    // Initialize ESPLoader with proper options
+                    const loaderOptions = {
+                        transport: this.transport,
+                        baudrate: 115200,
+                        terminal: this.terminal
+                    };
+                    
+                    this.loader = new window.ESPLoader(loaderOptions);
+                    
+                    // Initialize the loader
+                    this.chipDesc = await this.loader.main();
+                    this.chip = this.loader.chip.CHIP_NAME;
+                    
+                    this.addLogEntry(`Connected to: ${this.chipDesc}`, 'success');
+                    
+                    // Update UI
+                    this.updateStatus('Device connected', 'connected');
+                    this.connectBtn.disabled = true;
+                    this.flashBtn.disabled = false;
+                    this.disconnectBtn.disabled = false;
+                    
+                    // Show device info
+                    this.deviceInfo.style.display = 'block';
+                    this.deviceName.textContent = this.port.getInfo().usbProduct || 'Unknown';
+                    this.deviceSerial.textContent = this.port.getInfo().usbSerialNumber || 'Unknown';
+                    
+                } catch (error) {
+                    this.addLogEntry(`Connection failed: ${error.message}`, 'error');
+                    this.updateStatus(`Connection failed: ${error.message}`, 'disconnected');
+                }
+            }
+
+            async flashFirmware() {
+                if (!this.loader || !this.firmwareData || this.isFlashing) {
+                    return;
+                }
+
+                this.isFlashing = true;
+                this.updateStatus('Flashing firmware...', 'flashing');
+                this.progressContainer.style.display = 'block';
+                this.flashBtn.disabled = true;
+                
+                try {
+                    this.addLogEntry('Starting firmware flash...', 'info');
+                    
+                    // Create flash options
+                    const flashOptions = {
+                        fileArray: [{
+                            data: this.firmwareData,
+                            address: 0x10000
+                        }],
+                        flashSize: "keep",
+                        flashMode: undefined,
+                        flashFreq: undefined,
+                        eraseAll: false,
+                        compress: true,
+                        reportProgress: (fileIndex, written, total) => {
+                            const percent = Math.round((written / total) * 100);
+                            this.updateProgress(percent, `Flashing: ${this.formatBytes(written)} / ${this.formatBytes(total)}`);
+                        }
+                    };
+
+                    // Flash the firmware
+                    await this.loader.writeFlash(flashOptions);
+                    
+                    this.addLogEntry('Firmware flashed successfully!', 'success');
+                    this.updateProgress(100, 'Flash completed');
+                    this.updateStatus('Firmware flashed successfully', 'connected');
+                    
+                } catch (error) {
+                    this.addLogEntry(`Flash failed: ${error.message}`, 'error');
+                    this.updateStatus('Flash failed', 'disconnected');
+                } finally {
+                    this.isFlashing = false;
+                    this.flashBtn.disabled = false;
+                }
+            }
+
+            async disconnectDevice() {
+                if (this.port) {
+                    try {
+                        await this.port.close();
+                        this.addLogEntry('Device disconnected', 'info');
+                    } catch (error) {
+                        this.addLogEntry(`Error disconnecting: ${error.message}`, 'error');
+                    }
+                }
+                
+                this.port = null;
+                this.loader = null;
+                this.updateStatus('Device not connected', 'disconnected');
+                this.connectBtn.disabled = false;
+                this.flashBtn.disabled = true;
+                this.disconnectBtn.disabled = true;
+                this.deviceInfo.style.display = 'none';
+                this.progressContainer.style.display = 'none';
+            }
+        }
+
+        // Initialize the flasher when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ESP32Flasher();
+        });
+
+        // Check if Web Serial API is supported
+        if (!navigator.serial) {
+            document.body.innerHTML = `
+                <div class="container">
+                    <div class="header">
+                        <h1>ESP32 Firmware Flasher</h1>
+                    </div>
+                    <div class="status error">
+                        Web Serial API is not supported in this browser. 
+                        Please use Chrome or Edge version 89 or later.
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 
