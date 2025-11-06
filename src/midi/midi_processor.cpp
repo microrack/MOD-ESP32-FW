@@ -156,7 +156,6 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
         return;
     }
 
-
     if (!note_history.push(note)) {
         // Note already in use. Skipping.
         return;
@@ -179,7 +178,7 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
     Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
     
     if (!is_channel_match(channel)) return;
-
+    
     uint8_t prev_note;
     if (!note_history.pop(note, prev_note)) {
         // Note not in use. Skipping.
@@ -235,7 +234,6 @@ void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
 
 void MidiProcessor::handle_clock(void) {
     if (state->get_midi_clk_type() != MidiClkType::MidiClkExt) return;
-
 }
 
 void MidiProcessor::handle_start(void) {
