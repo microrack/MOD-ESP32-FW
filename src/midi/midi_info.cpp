@@ -1,8 +1,8 @@
 #include "midi_info.h"
 #include "util.h"
 
-MidiInfo::MidiInfo(Display* display, MidiSettingsState* state)
-    : ScreenInterface(display), state(state) {
+MidiInfo::MidiInfo(Display* display, MidiSettingsState* state, MidiProcessor* processor)
+    : ScreenInterface(display), state(state), processor(processor) {
     // Initialize any specific properties
 }
 
