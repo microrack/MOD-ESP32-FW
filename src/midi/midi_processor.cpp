@@ -204,8 +204,10 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
         } else {
             if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
                 // Restore previous note
-                out_pitch(i, prev_note);
-                last_out[i] = prev_note;
+                if (prev_note != NoteHistory::NO_NOTE) {
+                    out_pitch(i, prev_note);
+                    last_out[i] = prev_note;
+                }
             }
         }
     }

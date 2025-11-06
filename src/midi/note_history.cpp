@@ -34,6 +34,8 @@ bool NoteHistory::pop(uint8_t note, uint8_t & prev_note) {
         history[prev].next = NO_NOTE;
     }
 
+    prev_note = prev;
+
     history[note].reset();
     return true;
 }
