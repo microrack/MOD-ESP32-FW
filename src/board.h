@@ -16,9 +16,9 @@ const int ENCODER_A = 34;
 const int ENCODER_B = 35;
 
 const size_t PWM_COUNT = 3;
-const int PWM_0_PIN = 33;
+const int PWM_0_PIN = 26;
 const int PWM_1_PIN = 25;
-const int PWM_2_PIN = 26;
+const int PWM_2_PIN = 33;
 
 
 const int ADC_0 = 36;
