@@ -1,0 +1,9 @@
+key,type,encoding,value
+midi_settings,namespace,,
+bpm,data,u32,
+midi_channel,data,u32,
+midi_out_type_0,data,u32,
+midi_out_type_1,data,u32,
+midi_out_type_2,data,u32,
+midi_clk_type,data,u32,
+

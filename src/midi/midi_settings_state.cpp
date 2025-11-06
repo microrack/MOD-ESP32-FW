@@ -1,5 +1,9 @@
-#include <EEPROM.h>
+#include <nvs.h>
+#include <nvs_flash.h>
+#include <esp_err.h>
 #include "midi_settings_state.h"
+
+#define NVS_NAMESPACE "midi_settings"
 
 MidiSettingsState::MidiSettingsState(void) {
     // Initialize mutex to nullptr
@@ -20,52 +24,123 @@ void MidiSettingsState::begin(void) {
 
 void MidiSettingsState::store(void) {
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
-        uint32_t addr = MIDI_SETTINGS_EEPROM_ADDR;
-        EEPROM.writeUInt(addr, magic);
-        addr += sizeof(magic);
-        EEPROM.writeUInt(addr, version);
-        addr += sizeof(version);
-        EEPROM.writeUInt(addr, bpm);
-        addr += sizeof(bpm);
-        EEPROM.writeUInt(addr, midi_channel);
-        addr += sizeof(midi_channel);
-        for (size_t i = 0; i < MIDI_OUT_COUNT; i++) {
-            EEPROM.writeUInt(addr, midi_out_type[i]);
-            addr += sizeof(midi_out_type[i]);
-        }
-        EEPROM.writeUInt(addr, midi_clk_type);
-        addr += sizeof(midi_clk_type);
-        EEPROM.writeUInt(addr, magic);
-        EEPROM.commit();
+        store_nvs();
         xSemaphoreGive(state_mutex);
     }
 }
 
+esp_err_t MidiSettingsState::store_nvs(void) {
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        Serial.printf("store_nvs: failed to open NVS namespace, err=0x%x\n", err);
+        return err;
+    }
+
+    err = nvs_set_u32(nvs_handle, "bpm", (uint32_t)bpm);
+    if (err != ESP_OK) {
+        Serial.printf("store_nvs: failed to set bpm, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+
+    err = nvs_set_u32(nvs_handle, "midi_channel", (uint32_t)midi_channel);
+    if (err != ESP_OK) {
+        Serial.printf("store_nvs: failed to set midi_channel, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+
+    for (size_t i = 0; i < MIDI_OUT_COUNT; i++) {
+        char key[20];
+        snprintf(key, sizeof(key), "midi_out_type_%zu", i);
+        err = nvs_set_u32(nvs_handle, key, (uint32_t)midi_out_type[i]);
+        if (err != ESP_OK) {
+            Serial.printf("store_nvs: failed to set %s, err=0x%x\n", key, err);
+            nvs_close(nvs_handle);
+            return err;
+        }
+    }
+
+    err = nvs_set_u32(nvs_handle, "midi_clk_type", (uint32_t)midi_clk_type);
+    if (err != ESP_OK) {
+        Serial.printf("store_nvs: failed to set midi_clk_type, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        Serial.printf("store_nvs: failed to commit, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+
+    nvs_close(nvs_handle);
+    return ESP_OK;
+}
+
 void MidiSettingsState::recall(void) {
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
-        uint32_t addr = MIDI_SETTINGS_EEPROM_ADDR;
-        magic = EEPROM.readUInt(addr);
-        addr += sizeof(magic);
-        version = EEPROM.readUInt(addr);
-        addr += sizeof(version);
-        bpm = EEPROM.readUInt(addr);
-        addr += sizeof(bpm);
-        midi_channel = (MidiChannel)EEPROM.readUInt(addr);
-        addr += sizeof(midi_channel);
-        for (size_t i = 0; i < MIDI_OUT_COUNT; i++) {
-            midi_out_type[i] = (MidiOutType)EEPROM.readUInt(addr);
-            addr += sizeof(midi_out_type[i]);
-        }
-        midi_clk_type = (MidiClkType)EEPROM.readUInt(addr);
-        addr += sizeof(midi_clk_type);
-        magic = EEPROM.readUInt(addr);
-
-        if (magic != MAGIC || version != VERSION) {
+        esp_err_t err = recall_nvs();
+        if (err != ESP_OK) {
             set_default();
-            store();
+            store_nvs();
         }
         xSemaphoreGive(state_mutex);
     }
+}
+
+esp_err_t MidiSettingsState::recall_nvs(void) {
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err != ESP_OK) {
+        Serial.printf("recall_nvs: failed to open NVS namespace, err=0x%x\n", err);
+        return err;
+    }
+
+    uint32_t bpm_val;
+    err = nvs_get_u32(nvs_handle, "bpm", &bpm_val);
+    if (err != ESP_OK) {
+        Serial.printf("recall_nvs: failed to get bpm, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+    bpm = (int)bpm_val;
+
+    uint32_t ch_val;
+    err = nvs_get_u32(nvs_handle, "midi_channel", &ch_val);
+    if (err != ESP_OK) {
+        Serial.printf("recall_nvs: failed to get midi_channel, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+    midi_channel = (MidiChannel)ch_val;
+
+    for (size_t i = 0; i < MIDI_OUT_COUNT; i++) {
+        char key[20];
+        snprintf(key, sizeof(key), "midi_out_type_%zu", i);
+        uint32_t type_val;
+        err = nvs_get_u32(nvs_handle, key, &type_val);
+        if (err != ESP_OK) {
+            Serial.printf("recall_nvs: failed to get %s, err=0x%x\n", key, err);
+            nvs_close(nvs_handle);
+            return err;
+        }
+        midi_out_type[i] = (MidiOutType)type_val;
+    }
+
+    uint32_t clk_val;
+    err = nvs_get_u32(nvs_handle, "midi_clk_type", &clk_val);
+    if (err != ESP_OK) {
+        Serial.printf("recall_nvs: failed to get midi_clk_type, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+    midi_clk_type = (MidiClkType)clk_val;
+
+    nvs_close(nvs_handle);
+    return ESP_OK;
 }
 
 void MidiSettingsState::set_bpm(int bpm) {
@@ -199,8 +274,6 @@ const char* MidiSettingsState::midi_clk_type_to_string(MidiClkType type) {
 }
 
 void MidiSettingsState::set_default(void) {
-    magic = MAGIC;
-    version = VERSION;
     bpm = 120;
     midi_channel = MidiChannelAll;
     for (size_t i = 0; i < MIDI_OUT_COUNT; i++) {

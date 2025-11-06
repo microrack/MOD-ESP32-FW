@@ -169,9 +169,6 @@ enum MidiOutType {
 
 class MidiSettingsState {
 public:
-    const static uint32_t MAGIC = 0x4D494449;
-    const static uint32_t VERSION = 1;
-
     const static int MAX_BPM = 255;
     const static int MIN_BPM = 1;
     const static int MAX_MIDI_CHANNEL = MidiChannelAll;
@@ -215,8 +212,6 @@ public:
     static const size_t MIDI_OUT_COUNT = 3;
     size_t get_midi_out_count(void) { return MIDI_OUT_COUNT; }
 private:
-    uint32_t magic;
-    uint32_t version;
     int bpm;
     MidiChannel midi_channel;
     MidiOutType midi_out_type[MIDI_OUT_COUNT];
@@ -227,4 +222,6 @@ private:
     const char* midi_out_type_to_string(MidiOutType type);
     const char* midi_clk_type_to_string(MidiClkType type);
     void set_default(void);
+    esp_err_t recall_nvs(void);
+    esp_err_t store_nvs(void);
 };

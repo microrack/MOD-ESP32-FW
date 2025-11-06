@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <SPI.h>
 #include <Wire.h>
-#include <EEPROM.h>
+#include <nvs_flash.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_NeoPixel.h>
@@ -45,11 +45,15 @@ void setup() {
     display.clearDisplay();
     display.display();
 
-    // Initialize "EEPROM"
-    if (!EEPROM.begin(EEPROM_SIZE)) {
-        Serial.println("failed to initialize EEPROM");
-        delay(1000000);
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
     }
+    ESP_ERROR_CHECK(err);
 
     // Initialize input handler
     input_handler = Input();
