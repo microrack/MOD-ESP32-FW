@@ -38,11 +38,11 @@ void MidiInfo::render() {
     display->println(buffer);
     display->println();
 
-    sprintf(buffer, "Out A: %s", state->get_midi_out_type_str(0));
+    sprintf(buffer, "A: %s %d", state->get_midi_out_type_str(0), processor->last_out[0]);
     display->println(buffer);
-    sprintf(buffer, "Out B: %s", state->get_midi_out_type_str(1));
+    sprintf(buffer, "B: %s %d", state->get_midi_out_type_str(1), processor->last_out[1]);
     display->println(buffer);
-    sprintf(buffer, "Out C: %s", state->get_midi_out_type_str(2));
+    sprintf(buffer, "C: %s %d", state->get_midi_out_type_str(2), processor->last_out[2]);
     display->println(buffer);
 
     display->display();
