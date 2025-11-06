@@ -204,15 +204,15 @@ public:
     int get_min_bpm(void) { return MIN_BPM; }
     int get_max_midi_channel(void) { return MAX_MIDI_CHANNEL; }
     int get_min_midi_channel(void) { return MIN_MIDI_CHANNEL; }
-    int get_max_midi_out_type(void) { return MAX_MIDI_OUT_TYPE; }
-    int get_min_midi_out_type(void) { return MIN_MIDI_OUT_TYPE; }
+    int get_max_midi_out_type(size_t idx);
+    int get_min_midi_out_type(size_t idx);
     int get_max_midi_clk_type(void) { return MAX_MIDI_CLK_TYPE; }
     int get_min_midi_clk_type(void) { return MIN_MIDI_CLK_TYPE; }
     
 private:
     int bpm;
     MidiChannel midi_channel;
-    MidiOutType midi_out_type[MIDI_OUT_COUNT];
+    MidiOutType midi_out_type[PWM_COUNT];
     MidiClkType midi_clk_type;
     SemaphoreHandle_t state_mutex;
 

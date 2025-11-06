@@ -20,7 +20,7 @@ typedef struct {
     bool isPwm;
 } OutChannel;
 
-const size_t PWM_COUNT = 3;
+const size_t PWM_COUNT = 5;
 const int PWM_0_PIN = 26;
 const int PWM_1_PIN = 25;
 const int PWM_2_PIN = 33;
@@ -29,6 +29,8 @@ const OutChannel OUT_CHANNELS[PWM_COUNT] = {
     {26, true},
     {25, true},
     {33, true},
+    {12, false}, // clk
+    {13, false}, // reset
 };
 
 const int ADC_0 = 36;
@@ -49,7 +51,6 @@ const unsigned long SERIAL_BAUDRATE = 115200;
 
 // MIDI configuration
 const unsigned long MIDI_BAUDRATE = 31250;
-const size_t MIDI_OUT_COUNT = 3;
 const int MIDI_SETTINGS_EEPROM_ADDR = 0;
 
 // EEPROM

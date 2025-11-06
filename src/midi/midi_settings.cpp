@@ -33,6 +33,8 @@ void MidiSettings::render_menu() {
         "Out A: %s",
         "Out B: %s",
         "Out C: %s",
+        "Clock out: %s",
+        "Reset out: %s",
         "Clock: %s"
     };
 
@@ -66,6 +68,12 @@ void MidiSettings::render_menu() {
             case MENU_OUT_C:
                 sprintf(buffer, items[i], state->get_midi_out_type_str(2));
                 break;
+            case MENU_CLOCK_OUT:
+                sprintf(buffer, items[i], state->get_midi_out_type_str(3));
+                break;
+            case MENU_RESET_OUT:
+                sprintf(buffer, items[i], state->get_midi_out_type_str(4));
+                break;
             case MENU_CLOCK:
                 sprintf(buffer, items[i], state->get_midi_clk_type_str());
                 break;
@@ -97,18 +105,28 @@ void MidiSettings::handle_menu_input(Event* event) {
                     break;
                 case MENU_OUT_A:
                     state->set_midi_out_type(0, (MidiOutType)clampi(state->get_midi_out_type(0) + event->encoder,
-                                                                 state->get_min_midi_out_type(),
-                                                                 state->get_max_midi_out_type()));
+                                                                 state->get_min_midi_out_type(0),
+                                                                 state->get_max_midi_out_type(0)));
                     break;
                 case MENU_OUT_B:
                     state->set_midi_out_type(1, (MidiOutType)clampi(state->get_midi_out_type(1) + event->encoder,
-                                                                 state->get_min_midi_out_type(),
-                                                                 state->get_max_midi_out_type()));
+                                                                 state->get_min_midi_out_type(1),
+                                                                 state->get_max_midi_out_type(1)));
                     break;
                 case MENU_OUT_C:
                     state->set_midi_out_type(2, (MidiOutType)clampi(state->get_midi_out_type(2) + event->encoder,
-                                                                 state->get_min_midi_out_type(),
-                                                                 state->get_max_midi_out_type()));
+                                                                 state->get_min_midi_out_type(2),
+                                                                 state->get_max_midi_out_type(2)));
+                    break;
+                case MENU_CLOCK_OUT:
+                    state->set_midi_out_type(3, (MidiOutType)clampi(state->get_midi_out_type(3) + event->encoder,
+                                                                 state->get_min_midi_out_type(3),
+                                                                 state->get_max_midi_out_type(3)));
+                    break;
+                case MENU_RESET_OUT:
+                    state->set_midi_out_type(4, (MidiOutType)clampi(state->get_midi_out_type(4) + event->encoder,
+                                                                 state->get_min_midi_out_type(4),
+                                                                 state->get_max_midi_out_type(4)));
                     break;
                 case MENU_CLOCK:
                     state->set_midi_clk_type((MidiClkType)clampi(state->get_midi_clk_type() + event->encoder,

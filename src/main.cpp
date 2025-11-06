@@ -61,7 +61,7 @@ void setup() {
     // Initialize NeoPixel
     pixels.begin();
     pixels.setBrightness(50);
-    pixels.setPixelColor(0, pixels.Color(0, 0, 255));
+    pixels.setPixelColor(0, pixels.Color(0, 0, 2));
     pixels.show();
 
     // Initialize MIDI screen components

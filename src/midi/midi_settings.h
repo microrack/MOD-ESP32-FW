@@ -19,6 +19,8 @@ private:
         MENU_OUT_A,
         MENU_OUT_B,
         MENU_OUT_C,
+        MENU_CLOCK_OUT,
+        MENU_RESET_OUT,
         MENU_CLOCK,
         MENU_COUNT
     };
