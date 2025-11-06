@@ -19,6 +19,8 @@ public:
     void handle_start(void);
     void handle_stop(void);
 
+    uint8_t last_out[PWM_COUNT];
+
 private:
     static const int V_NOTE = 1024 / (12 * 10);
 

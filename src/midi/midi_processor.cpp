@@ -63,6 +63,10 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
 
     // Initialize task handle to nullptr
     midi_task_handle = nullptr;
+
+    for(size_t i = 0; i < PWM_COUNT; i++) {
+        last_out[i] = 0;
+    }
 }
 
 void MidiProcessor::begin(void) {
@@ -162,13 +166,16 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
     }
 
     for (int i = 0; i < PWM_COUNT; i++) {
+        MidiOutType type = state->get_midi_out_type(i);
+        if (type == MidiOutType::MidiOutGate) {
             out_gate(i, velocity);
-        }
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+            last_out[i] = velocity;
+        } else if (type == MidiOutType::MidiOutPitch) {
             out_pitch(i, note);
-        }
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
+            last_out[i] = note;
+        } else if (type == MidiOutType::MidiOutVelocity) {
             out_7bit_value(i, velocity);
+            last_out[i] = velocity;
         }
     }
 }
@@ -188,14 +195,17 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
         if (prev_note == NoteHistory::NO_NOTE) {
             if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
                 out_gate(i, 0);
+                last_out[i] = 0;
             }
             if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
                 out_7bit_value(i, 0);
+                last_out[i] = 0;
             }
         } else {
             if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
                 // Restore previous note
                 out_pitch(i, prev_note);
+                last_out[i] = prev_note;
             }
         }
     }
@@ -207,6 +217,7 @@ void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
     for (int i = 0; i < PWM_COUNT; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
             out_7bit_value(i, value);
+            last_out[i] = value;
         }
     }
 }
@@ -217,6 +228,7 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     for (int i = 0; i < PWM_COUNT; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
             out_7bit_value(i, value);
+            last_out[i] = value;
         }
     }
 }
@@ -227,6 +239,7 @@ void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
     for (int i = 0; i < PWM_COUNT; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
             // TODO: implement
+            last_out[i] = value;
         }
     }
 }
