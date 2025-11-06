@@ -95,7 +95,7 @@ void MidiProcessor::out_pitch(int ch, int note)
 {
     Serial.printf("out_pitch: %d, %d\n", ch, note);
 
-    int v = V_NOTE * note;
+    int v = (note - MIDDLE_NOTE) * PWM_NOTE_SCALE + PWM_ZERO_OFFSET;
     if (v > int(PWM_MAX_VAL))
         return;
 
@@ -114,10 +114,7 @@ void MidiProcessor::out_7bit_value(int pwm_ch, int value)
 {
     Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
     
-    const int BITS = 7;
-    const int SHIFT = PWM_RESOLUTION - BITS;
-
-    int v = value << SHIFT;
+    int v = map(value, 0, (1 << 7) - 1, PWM_ZERO_OFFSET, PWM_MAX_VAL);
     
     // Map channel to pin for new LEDC API
     int pin;
@@ -144,7 +141,7 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
     }
     
     if (velocity == 0) {
-        ledcWrite(pin, 0);
+        ledcWrite(pin, PWM_ZERO_OFFSET);
     } else {
         ledcWrite(pin, PWM_MAX_VAL);
     }

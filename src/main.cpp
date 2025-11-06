@@ -67,7 +67,7 @@ void setup() {
     // Initialize MIDI screen components
     midi_screen.begin();
 
-    screen_switcher.set_screen(0);
+    screen_switcher.set_screen(1);
 }
 
 void loop() {

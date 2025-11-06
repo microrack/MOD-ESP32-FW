@@ -22,7 +22,9 @@ public:
     uint8_t last_out[PWM_COUNT];
 
 private:
-    static const int V_NOTE = 1024 / (12 * 10);
+    static constexpr float PWM_NOTE_SCALE = (1 << PWM_RESOLUTION) / (12 * 10.99); // 10.99 Vpp, 12 notes per octave (1 V/oct)
+    static const int PWM_ZERO_OFFSET = 498; // 0 V at MIDDLE_NOTE
+    static const int MIDDLE_NOTE = 60; // C4 (middle C)
 
     MidiSettingsState* state;
     NoteHistory note_history;
