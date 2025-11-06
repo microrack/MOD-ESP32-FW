@@ -208,9 +208,7 @@ public:
     int get_min_midi_out_type(void) { return MIN_MIDI_OUT_TYPE; }
     int get_max_midi_clk_type(void) { return MAX_MIDI_CLK_TYPE; }
     int get_min_midi_clk_type(void) { return MIN_MIDI_CLK_TYPE; }
-
-    static const size_t MIDI_OUT_COUNT = 3;
-    size_t get_midi_out_count(void) { return MIDI_OUT_COUNT; }
+    
 private:
     int bpm;
     MidiChannel midi_channel;

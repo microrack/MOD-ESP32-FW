@@ -161,8 +161,7 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
         return;
     }
 
-    for (int i = 0; i < state->get_midi_out_count(); i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
+    for (int i = 0; i < PWM_COUNT; i++) {
             out_gate(i, velocity);
         }
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
@@ -185,7 +184,7 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
         return;
     }
 
-    for (int i = 0; i < state->get_midi_out_count(); i++) {
+    for (int i = 0; i < PWM_COUNT; i++) {
         if (prev_note == NoteHistory::NO_NOTE) {
             if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
                 out_gate(i, 0);
@@ -205,7 +204,7 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
 void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
     if (!is_channel_match(channel)) return;
 
-    for (int i = 0; i < state->get_midi_out_count(); i++) {
+    for (int i = 0; i < PWM_COUNT; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
             out_7bit_value(i, value);
         }
@@ -215,7 +214,7 @@ void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
 void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     if (!is_channel_match(channel)) return;
 
-    for (int i = 0; i < state->get_midi_out_count(); i++) {
+    for (int i = 0; i < PWM_COUNT; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
             out_7bit_value(i, value);
         }
@@ -225,7 +224,7 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
 void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
     if (!is_channel_match(channel)) return;
 
-    for (int i = 0; i < state->get_midi_out_count(); i++) {
+    for (int i = 0; i < PWM_COUNT; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
             // TODO: implement
         }
