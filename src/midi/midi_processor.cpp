@@ -93,6 +93,9 @@ void MidiProcessor::midi_task(void* parameter) {
 
 void MidiProcessor::out_pitch(int ch, int note)
 {
+    if(ch >= PWM_COUNT) return;
+    if(ch < 0) return;
+
     Serial.printf("out_pitch: %d, %d\n", ch, note);
 
     int v = (note - MIDDLE_NOTE) * PWM_NOTE_SCALE + PWM_ZERO_OFFSET;
@@ -100,50 +103,49 @@ void MidiProcessor::out_pitch(int ch, int note)
         return;
 
     // Map channel to pin for new LEDC API
-    int pin;
-    switch(ch) {
-        case 0: pin = PWM_0_PIN; break;
-        case 1: pin = PWM_1_PIN; break;
-        case 2: pin = PWM_2_PIN; break;
-        default: return;
+    int pin = OUT_CHANNELS[ch].pin;
+    if(OUT_CHANNELS[ch].isPwm) {
+        ledcWrite(pin, v);
+    } else {
+        return;
     }
-    ledcWrite(pin, v);
 }
 
 void MidiProcessor::out_7bit_value(int pwm_ch, int value)
 {
+    if(pwm_ch >= PWM_COUNT) return;
+    if(pwm_ch < 0) return;
+
     Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
     
     int v = map(value, 0, (1 << 7) - 1, PWM_ZERO_OFFSET, PWM_MAX_VAL);
     
     // Map channel to pin for new LEDC API
-    int pin;
-    switch(pwm_ch) {
-        case 0: pin = PWM_0_PIN; break;
-        case 1: pin = PWM_1_PIN; break;
-        case 2: pin = PWM_2_PIN; break;
-        default: return;
+    int pin = OUT_CHANNELS[pwm_ch].pin;
+    if(OUT_CHANNELS[pwm_ch].isPwm) {
+        ledcWrite(pin, v);
+    } else {
+        digitalWrite(pin, v > 0 ? HIGH : LOW);
     }
-    ledcWrite(pin, v);
 }
 
 void MidiProcessor::out_gate(int pwm_ch, int velocity)
 {
+    if(pwm_ch >= PWM_COUNT) return;
+    if(pwm_ch < 0) return;
+
     Serial.printf("out_gate: %d, %d\n", pwm_ch, velocity);
 
     // Map channel to pin for new LEDC API
-    int pin;
-    switch(pwm_ch) {
-        case 0: pin = PWM_0_PIN; break;
-        case 1: pin = PWM_1_PIN; break;
-        case 2: pin = PWM_2_PIN; break;
-        default: return;
-    }
-    
-    if (velocity == 0) {
-        ledcWrite(pin, PWM_ZERO_OFFSET);
+    int pin = OUT_CHANNELS[pwm_ch].pin;
+    if(OUT_CHANNELS[pwm_ch].isPwm) {
+        if (velocity == 0) {
+            ledcWrite(pin, PWM_ZERO_OFFSET);
+        } else {
+            ledcWrite(pin, PWM_MAX_VAL);
+        }
     } else {
-        ledcWrite(pin, PWM_MAX_VAL);
+        digitalWrite(pin, velocity > 0 ? HIGH : LOW);
     }
 }
 

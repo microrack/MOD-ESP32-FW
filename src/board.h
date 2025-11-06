@@ -15,11 +15,21 @@ const int ENCODER_SW = 39;
 const int ENCODER_A = 34;
 const int ENCODER_B = 35;
 
+typedef struct {
+    int pin;
+    bool isPwm;
+} OutChannel;
+
 const size_t PWM_COUNT = 3;
 const int PWM_0_PIN = 26;
 const int PWM_1_PIN = 25;
 const int PWM_2_PIN = 33;
 
+const OutChannel OUT_CHANNELS[PWM_COUNT] = {
+    {26, true},
+    {25, true},
+    {33, true},
+};
 
 const int ADC_0 = 36;
 const int ADC_1 = 37;
