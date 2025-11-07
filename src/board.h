@@ -59,3 +59,5 @@ const int MIDI_SETTINGS_EEPROM_ADDR = 0;
 
 // EEPROM
 const size_t EEPROM_SIZE = 64;
+
+const bool DEBUG_MIDI_PROCESSOR = false;

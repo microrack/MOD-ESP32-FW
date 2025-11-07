@@ -1,5 +1,6 @@
 #include "note_history.h"
 #include <Arduino.h>
+#include "../board.h"
 
 void NoteHistory::Note::reset(void)
 {
@@ -9,7 +10,7 @@ void NoteHistory::Note::reset(void)
 }
 
 bool NoteHistory::push(uint8_t note) {
-    Serial.printf("  pushing note: %d\n", note);
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("  pushing note: %d\n", note);
     
     if (history[note].in_use) {
         Serial.println("  push FAILED: note already in use");
@@ -27,7 +28,7 @@ bool NoteHistory::push(uint8_t note) {
 }
 
 bool NoteHistory::pop(uint8_t note) {
-    Serial.printf("  popping note: %d\n", note);
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("  popping note: %d\n", note);
     
     if (!history[note].in_use) {
         Serial.println("  pop FAILED: note not in use");

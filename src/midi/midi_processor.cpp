@@ -96,7 +96,7 @@ void MidiProcessor::out_pitch(int ch, int note)
     if(ch >= OutChannelCount) return;
     if(ch < 0) return;
 
-    Serial.printf("out_pitch: %d, %d\n", ch, note);
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("out_pitch: %d, %d\n", ch, note);
 
     int v = (note - MIDDLE_NOTE) * PWM_NOTE_SCALE + PWM_ZERO_OFFSET;
     if (v > int(PWM_MAX_VAL))
@@ -116,7 +116,7 @@ void MidiProcessor::out_7bit_value(int pwm_ch, int value)
     if(pwm_ch >= OutChannelCount) return;
     if(pwm_ch < 0) return;
 
-    Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
     
     int v = map(value, 0, (1 << 7) - 1, PWM_ZERO_OFFSET, PWM_MAX_VAL);
     
@@ -134,7 +134,7 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
     if(pwm_ch >= OutChannelCount) return;
     if(pwm_ch < 0) return;
 
-    Serial.printf("out_gate: %d, %d\n", pwm_ch, velocity);
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("out_gate: %d, %d\n", pwm_ch, velocity);
 
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[pwm_ch].pin;
@@ -150,7 +150,7 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
 }
 
 void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
-    Serial.printf("handle_note_on: %d, %d, %d\n", channel, note, velocity);
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("handle_note_on: %d, %d, %d\n", channel, note, velocity);
 
     if (velocity == 0) {
         handle_note_off(channel, note, velocity);
@@ -180,7 +180,7 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
 }
 
 void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
-    Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
 
     if (!note_history[channel].pop(note)) {
         // Note not in use. Skipping.
