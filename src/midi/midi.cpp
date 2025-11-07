@@ -2,16 +2,20 @@
 
 MidiRoot::MidiRoot(Display* display)
     : ScreenInterface(display),
-      midi_info(display, &state, &processor),
-      midi_settings(display, &state),
+      midi_info(display, &state, &processor, nullptr),
+      midi_settings(display, &state, nullptr),
       processor(&state) {
 
     // Initialize MIDI screens array
-    midi_screens[0] = &midi_info;
-    midi_screens[1] = &midi_settings;
+    midi_screens[MidiScreen::MidiScreenInfo] = &midi_info;
+    midi_screens[MidiScreen::MidiScreenSettings] = &midi_settings;
 
     // Initialize screen switcher with the screens array
-    screen_switcher = ScreenSwitcher(midi_screens, 2);
+    screen_switcher = ScreenSwitcher(midi_screens, MidiScreen::MidiScreenCount);
+
+    // Set screen_switcher pointer in midi_info and midi_settings
+    midi_info.set_screen_switcher(&screen_switcher);
+    midi_settings.set_screen_switcher(&screen_switcher);
 }
 
 void MidiRoot::begin(void) {
@@ -21,7 +25,7 @@ void MidiRoot::begin(void) {
 }
 
 void MidiRoot::enter() {
-    screen_switcher.set_screen(0);
+    screen_switcher.set_screen(MidiScreen::MidiScreenInfo);
 }
 
 void MidiRoot::exit() {
@@ -34,16 +38,6 @@ void MidiRoot::update(Event* event) {
     // Handle encoder changes
     if (event->encoder != 0) {
         // Pass to current screen
-    }
-
-    // Handle button events - specifically switch screens on button_sw press
-    switch (event->button_a) {
-        case ButtonPress:
-            // Switch to next MIDI screen
-            screen_switcher.set_screen(screen_switcher.get_next());
-            break;
-        default:
-            break;
     }
 
     // Update the current sub-screen with the event

@@ -8,7 +8,8 @@ class MidiSettingsState;
 
 class MidiSettings : public ScreenInterface {
 public:
-    MidiSettings(Display* display, MidiSettingsState* state);
+    MidiSettings(Display* display, MidiSettingsState* state, ScreenSwitcher* screen_switcher = nullptr);
+    void set_screen_switcher(ScreenSwitcher* screen_switcher);
     void enter() override;
     void exit() override;
     void update(Event* event) override;
@@ -62,6 +63,7 @@ private:
     const int LINE_HEIGHT = 8;
 
     MidiSettingsState* state;
+    ScreenSwitcher* screen_switcher;
     MenuItems current_item;
     bool is_editing;
     int row_number; // current column position within row (0 = first column, 1 = second column for ChannelItem)

@@ -9,6 +9,12 @@
 #include "midi_settings_state.h"
 #include "midi_processor.h"
 
+enum MidiScreen {
+    MidiScreenInfo,
+    MidiScreenSettings,
+    MidiScreenCount
+};
+
 class MidiRoot : public ScreenInterface {
 public:
     MidiRoot(Display* display);
@@ -20,7 +26,7 @@ public:
 private:
     MidiInfo midi_info;
     MidiSettings midi_settings;
-    ScreenInterface* midi_screens[2];
+    ScreenInterface* midi_screens[MidiScreen::MidiScreenCount];
     ScreenSwitcher screen_switcher;
     MidiSettingsState state;
     MidiProcessor processor;

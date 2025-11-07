@@ -1,9 +1,14 @@
+#include "midi.h"
 #include "midi_settings.h"
 #include "util.h"
 
-MidiSettings::MidiSettings(Display* display, MidiSettingsState* state)
-    : ScreenInterface(display), state(state),
+MidiSettings::MidiSettings(Display* display, MidiSettingsState* state, ScreenSwitcher* screen_switcher)
+    : ScreenInterface(display), state(state), screen_switcher(screen_switcher),
       current_item(MENU_CHANNEL), is_editing(false), row_number(0) {}
+
+void MidiSettings::set_screen_switcher(ScreenSwitcher* screen_switcher) {
+    this->screen_switcher = screen_switcher;
+}
 
 void MidiSettings::enter() {
     current_item = MENU_CHANNEL;
@@ -12,8 +17,7 @@ void MidiSettings::enter() {
 }
 
 void MidiSettings::exit() {
-    display->clearDisplay();
-    display->display();
+    
 }
 
 void MidiSettings::render() {
@@ -128,8 +132,22 @@ void MidiSettings::render_menu() {
 void MidiSettings::handle_input(Event* event) {
     if (event == nullptr) return;
 
-    if (event->button_sw == ButtonPress) {
-        is_editing = !is_editing;
+    if(is_editing) {
+        if (event->button_sw == ButtonPress) {
+            is_editing = false;
+        }
+
+        if(event->button_a == ButtonPress) {
+            is_editing = false;
+        }
+    } else {
+        if (event->button_sw == ButtonPress) {
+            is_editing = true;
+        }
+
+        if(event->button_a == ButtonPress) {
+            screen_switcher->set_screen(MidiScreen::MidiScreenInfo);
+        }
     }
 
     handle_menu_input(event);

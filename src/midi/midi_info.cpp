@@ -1,23 +1,22 @@
+#include "midi.h"
 #include "midi_info.h"
 #include "util.h"
 
-MidiInfo::MidiInfo(Display* display, MidiSettingsState* state, MidiProcessor* processor)
-    : ScreenInterface(display), state(state), processor(processor) {
+MidiInfo::MidiInfo(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher)
+    : ScreenInterface(display), state(state), processor(processor), screen_switcher(screen_switcher) {
     // Initialize any specific properties
 }
 
+void MidiInfo::set_screen_switcher(ScreenSwitcher* screen_switcher) {
+    this->screen_switcher = screen_switcher;
+}
+
 void MidiInfo::enter() {
-    display->clearDisplay();
-    display->setTextSize(1);
-    display->setTextColor(SSD1306_WHITE);
-    display->setCursor(0,0);
-    display->println(F("MIDI Info"));
-    display->display();
+    
 }
 
 void MidiInfo::exit() {
-    display->clearDisplay();
-    display->display();
+
 }
 
 void MidiInfo::render() {
@@ -56,6 +55,10 @@ void MidiInfo::handle_input(Event* event) {
                            state->get_min_bpm(),
                            state->get_max_bpm()));
         state->store(); // TODO: delay before storing for saving FLASH
+    }
+
+    if(event->button_sw == ButtonPress) {
+        screen_switcher->set_screen(MidiScreen::MidiScreenSettings);
     }
 }
 
