@@ -111,8 +111,7 @@ void MidiSettings::render_menu() {
                 display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
             }
             display->setCursor(COL2_X, y + 1);
-            int output_idx = i - 1; // MENU_OUT_A = 1, so idx = 0
-            display->print(state->get_midi_out_type_str(output_idx));
+            display->print(state->get_midi_out_type_str(items[i].data.output_idx));
 
             // Column 3: MIDI out channel
             if (channel_selected && is_editing) {
@@ -121,7 +120,7 @@ void MidiSettings::render_menu() {
                 display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
             }
             display->setCursor(COL3_X, y + 1);
-            display->print(midi_channel_to_string_simple(state->get_midi_out_channel(output_idx)));
+            display->print(midi_channel_to_string_simple(state->get_midi_out_channel(items[i].data.output_idx)));
         }
     }
 }
@@ -140,72 +139,36 @@ void MidiSettings::handle_menu_input(Event* event) {
     if (event->encoder != 0) {
         if (is_editing) {
             // Adjust value
-            switch (current_item) {
-                case MENU_CHANNEL:
-                    state->set_midi_channel((MidiChannel)clampi(state->get_midi_channel() + event->encoder,
-                                                             state->get_min_midi_channel(),
-                                                             state->get_max_midi_channel()));
-                    break;
-                case MENU_OUT_A:
-                    if (row_number == 1) {
-                        state->set_midi_out_channel(0, (MidiChannel)clampi(state->get_midi_out_channel(0) + event->encoder,
-                                                                         state->get_min_midi_channel(),
-                                                                         state->get_max_midi_channel()));
-                    } else {
-                        state->set_midi_out_type(0, (MidiOutType)clampi(state->get_midi_out_type(0) + event->encoder,
-                                                                     state->get_min_midi_out_type(0),
-                                                                     state->get_max_midi_out_type(0)));
-                    }
-                    break;
-                case MENU_OUT_B:
-                    if (row_number == 1) {
-                        state->set_midi_out_channel(1, (MidiChannel)clampi(state->get_midi_out_channel(1) + event->encoder,
-                                                                         state->get_min_midi_channel(),
-                                                                         state->get_max_midi_channel()));
-                    } else {
-                        state->set_midi_out_type(1, (MidiOutType)clampi(state->get_midi_out_type(1) + event->encoder,
-                                                                     state->get_min_midi_out_type(1),
-                                                                     state->get_max_midi_out_type(1)));
-                    }
-                    break;
-                case MENU_OUT_C:
-                    if (row_number == 1) {
-                        state->set_midi_out_channel(2, (MidiChannel)clampi(state->get_midi_out_channel(2) + event->encoder,
-                                                                         state->get_min_midi_channel(),
-                                                                         state->get_max_midi_channel()));
-                    } else {
-                        state->set_midi_out_type(2, (MidiOutType)clampi(state->get_midi_out_type(2) + event->encoder,
-                                                                     state->get_min_midi_out_type(2),
-                                                                     state->get_max_midi_out_type(2)));
-                    }
-                    break;
-                case MENU_CLOCK_OUT:
-                    if (row_number == 1) {
-                        state->set_midi_out_channel(3, (MidiChannel)clampi(state->get_midi_out_channel(3) + event->encoder,
-                                                                         state->get_min_midi_channel(),
-                                                                         state->get_max_midi_channel()));
-                    } else {
-                        state->set_midi_out_type(3, (MidiOutType)clampi(state->get_midi_out_type(3) + event->encoder,
-                                                                     state->get_min_midi_out_type(3),
-                                                                     state->get_max_midi_out_type(3)));
-                    }
-                    break;
-                case MENU_RESET_OUT:
-                    if (row_number == 1) {
-                        state->set_midi_out_channel(4, (MidiChannel)clampi(state->get_midi_out_channel(4) + event->encoder,
-                                                                         state->get_min_midi_channel(),
-                                                                         state->get_max_midi_channel()));
-                    } else {
-                        state->set_midi_out_type(4, (MidiOutType)clampi(state->get_midi_out_type(4) + event->encoder,
-                                                                     state->get_min_midi_out_type(4),
-                                                                     state->get_max_midi_out_type(4)));
-                    }
-                    break;
-                case MENU_CLOCK:
-                    state->set_midi_clk_type((MidiClkType)clampi(state->get_midi_clk_type() + event->encoder,
-                                                               state->get_min_midi_clk_type(),
-                                                               state->get_max_midi_clk_type()));
-                    break;
+            const MenuItemInfo& item = items[current_item];
+            
+            if (item.type == SingleItem) {
+                // Single column items
+                switch (current_item) {
+                    case MENU_CHANNEL:
+                        state->set_midi_channel((MidiChannel)clampi(state->get_midi_channel() + event->encoder,
+                                                                 state->get_min_midi_channel(),
+                                                                 state->get_max_midi_channel()));
+                        break;
+                    case MENU_CLOCK:
+                        state->set_midi_clk_type((MidiClkType)clampi(state->get_midi_clk_type() + event->encoder,
+                                                                   state->get_min_midi_clk_type(),
+                                                                   state->get_max_midi_clk_type()));
+                        break;
+                }
+            } else {
+                // ChannelItem: outputs with two columns
+                int idx = item.data.output_idx;
+                if (row_number == 1) {
+                    // Editing channel column
+                    state->set_midi_out_channel(idx, (MidiChannel)clampi(state->get_midi_out_channel(idx) + event->encoder,
+                                                                       state->get_min_midi_channel(),
+                                                                       state->get_max_midi_channel()));
+                } else {
+                    // Editing type column
+                    state->set_midi_out_type(idx, (MidiOutType)clampi(state->get_midi_out_type(idx) + event->encoder,
+                                                                   state->get_min_midi_out_type(idx),
+                                                                   state->get_max_midi_out_type(idx)));
+                }
             }
             state->store();
         } else {

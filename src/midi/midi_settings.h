@@ -33,16 +33,20 @@ private:
     struct MenuItemInfo {
         const char* text;
         ColumnType type; // number of columns
+        union {
+            void* unused;
+            int output_idx; // output index for ChannelItem (0-4)
+        } data;
     };
 
     static constexpr MenuItemInfo items[MENU_COUNT] = {
-        {"Channel", SingleItem},
-        {" A", ChannelItem},
-        {" B", ChannelItem},
-        {" C", ChannelItem},
-        {"CLK", ChannelItem},
-        {"RST", ChannelItem},
-        {"Clock", SingleItem}
+        {"Channel", SingleItem, {.unused = nullptr}},
+        {" A", ChannelItem, {.output_idx = 0}},
+        {" B", ChannelItem, {.output_idx = 1}},
+        {" C", ChannelItem, {.output_idx = 2}},
+        {"CLK", ChannelItem, {.output_idx = 3}},
+        {"RST", ChannelItem, {.output_idx = 4}},
+        {"Clock", SingleItem, {.unused = nullptr}}
     };
 
     enum Direction {
