@@ -31,6 +31,9 @@ ScreenSwitcher screen_switcher(screens, screen_count);
 Adafruit_NeoPixel pixels(1, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
+    pinMode(OUT_CHANNELS[OutChannelClk].pin, OUTPUT);
+    pinMode(OUT_CHANNELS[OutChannelRst].pin, OUTPUT);
+    
     // Initialize serial
     Serial.begin(SERIAL_BAUDRATE);
 
