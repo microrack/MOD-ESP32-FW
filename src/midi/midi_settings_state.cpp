@@ -62,6 +62,17 @@ esp_err_t MidiSettingsState::store_nvs(void) {
         }
     }
 
+    for (size_t i = 0; i < PWM_COUNT; i++) {
+        char key[25];
+        snprintf(key, sizeof(key), "midi_out_channel_%zu", i);
+        err = nvs_set_u32(nvs_handle, key, (uint32_t)midi_out_channel[i]);
+        if (err != ESP_OK) {
+            Serial.printf("store_nvs: failed to set %s, err=0x%x\n", key, err);
+            nvs_close(nvs_handle);
+            return err;
+        }
+    }
+
     err = nvs_set_u32(nvs_handle, "midi_clk_type", (uint32_t)midi_clk_type);
     if (err != ESP_OK) {
         Serial.printf("store_nvs: failed to set midi_clk_type, err=0x%x\n", err);
@@ -130,6 +141,19 @@ esp_err_t MidiSettingsState::recall_nvs(void) {
         midi_out_type[i] = (MidiOutType)type_val;
     }
 
+    for (size_t i = 0; i < PWM_COUNT; i++) {
+        char key[25];
+        snprintf(key, sizeof(key), "midi_out_channel_%zu", i);
+        uint32_t ch_val;
+        err = nvs_get_u32(nvs_handle, key, &ch_val);
+        if (err != ESP_OK) {
+            Serial.printf("recall_nvs: failed to get %s, err=0x%x\n", key, err);
+            nvs_close(nvs_handle);
+            return err;
+        }
+        midi_out_channel[i] = (MidiChannel)ch_val;
+    }
+
     uint32_t clk_val;
     err = nvs_get_u32(nvs_handle, "midi_clk_type", &clk_val);
     if (err != ESP_OK) {
@@ -166,6 +190,15 @@ void MidiSettingsState::set_midi_out_type(size_t idx, MidiOutType type) {
     }
 }
 
+void MidiSettingsState::set_midi_out_channel(size_t idx, MidiChannel ch) {
+    if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
+        if (idx < PWM_COUNT) {
+            this->midi_out_channel[idx] = ch;
+        }
+        xSemaphoreGive(state_mutex);
+    }
+}
+
 void MidiSettingsState::set_midi_clk_type(MidiClkType type) {
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
         this->midi_clk_type = type;
@@ -196,6 +229,17 @@ MidiOutType MidiSettingsState::get_midi_out_type(size_t idx) {
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
         if (idx < PWM_COUNT) {
             result = this->midi_out_type[idx];
+        }
+        xSemaphoreGive(state_mutex);
+    }
+    return result;
+}
+
+MidiChannel MidiSettingsState::get_midi_out_channel(size_t idx) {
+    MidiChannel result = MidiChannel0;
+    if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
+        if (idx < PWM_COUNT) {
+            result = this->midi_out_channel[idx];
         }
         xSemaphoreGive(state_mutex);
     }
@@ -300,6 +344,7 @@ void MidiSettingsState::set_default(void) {
     midi_channel = MidiChannelAll;
     for (size_t i = 0; i < PWM_COUNT; i++) {
         midi_out_type[i] = MidiOutPitch;
+        midi_out_channel[i] = MidiChannelAll;
     }
     midi_clk_type = MidiClkInt;
 }

@@ -193,11 +193,13 @@ public:
     void set_bpm(int bpm);
     void set_midi_channel(MidiChannel ch);
     void set_midi_out_type(size_t idx, MidiOutType type);
+    void set_midi_out_channel(size_t idx, MidiChannel ch);
     void set_midi_clk_type(MidiClkType type);
 
     int get_bpm(void);
     MidiChannel get_midi_channel(void);
     MidiOutType get_midi_out_type(size_t idx);
+    MidiChannel get_midi_out_channel(size_t idx);
     MidiClkType get_midi_clk_type(void);
 
     int get_max_bpm(void) { return MAX_BPM; }
@@ -213,6 +215,7 @@ private:
     int bpm;
     MidiChannel midi_channel;
     MidiOutType midi_out_type[PWM_COUNT];
+    MidiChannel midi_out_channel[PWM_COUNT];
     MidiClkType midi_clk_type;
     SemaphoreHandle_t state_mutex;
 

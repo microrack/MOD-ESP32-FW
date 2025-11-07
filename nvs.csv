@@ -7,5 +7,10 @@ midi_out_type_1,data,u32,
 midi_out_type_2,data,u32,
 midi_out_type_3,data,u32
 midi_out_type_4,data,u32
+midi_out_channel_0,data,u32,
+midi_out_channel_1,data,u32,
+midi_out_channel_2,data,u32,
+midi_out_channel_3,data,u32,
+midi_out_channel_4,data,u32,
 midi_clk_type,data,u32,
 
