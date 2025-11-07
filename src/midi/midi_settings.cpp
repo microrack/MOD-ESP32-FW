@@ -17,7 +17,7 @@ void MidiSettings::enter() {
 }
 
 void MidiSettings::exit() {
-    
+
 }
 
 void MidiSettings::render() {
@@ -30,18 +30,6 @@ void MidiSettings::render() {
     render_menu();
 
     display->display();
-}
-
-const char* midi_channel_to_string_simple(MidiChannel ch) {
-    if (ch == MidiChannelAll) {
-        return "all";
-    }
-    if (ch >= MidiChannel0 && ch <= MidiChannel16) {
-        static char buf[10];
-        snprintf(buf, sizeof(buf), "%d", (int)ch);
-        return buf;
-    }
-    return "?";
 }
 
 void MidiSettings::render_menu() {
@@ -124,7 +112,7 @@ void MidiSettings::render_menu() {
                 display->setTextColor(SSD1306_WHITE, SSD1306_BLACK);
             }
             display->setCursor(COL3_X, y + 1);
-            display->print(midi_channel_to_string_simple(state->get_midi_out_channel(items[i].data.output_idx)));
+            display->print(state->get_midi_out_channel_str(items[i].data.output_idx));
         }
     }
 }
@@ -179,8 +167,8 @@ void MidiSettings::handle_menu_input(Event* event) {
                 if (row_number == 1) {
                     // Editing channel column
                     state->set_midi_out_channel(idx, (MidiChannel)clampi(state->get_midi_out_channel(idx) + event->encoder,
-                                                                       state->get_min_midi_channel(),
-                                                                       state->get_max_midi_channel()));
+                                                                       state->get_min_midi_out_channel(),
+                                                                       state->get_max_midi_out_channel()));
                 } else {
                     // Editing type column
                     state->set_midi_out_type(idx, (MidiOutType)clampi(state->get_midi_out_type(idx) + event->encoder,

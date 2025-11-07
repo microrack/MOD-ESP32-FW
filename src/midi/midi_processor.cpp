@@ -44,9 +44,9 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     processor = this;
 
     // Initialize PWM using new ESP32 Arduino 3.0 API
-    ledcAttach(PWM_0_PIN, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttach(PWM_1_PIN, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttach(PWM_2_PIN, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttach(OUT_CHANNELS[OutChannelA].pin, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttach(OUT_CHANNELS[OutChannelB].pin, PWM_FREQ, PWM_RESOLUTION);
+    ledcAttach(OUT_CHANNELS[OutChannelC].pin, PWM_FREQ, PWM_RESOLUTION);
 
     // Initialize MIDI
     Serial2.begin(MIDI_BAUDRATE, SERIAL_8N1, MIDI_RX_PIN, MIDI_TX_PIN);
@@ -64,7 +64,7 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     // Initialize task handle to nullptr
     midi_task_handle = nullptr;
 
-    for(size_t i = 0; i < PWM_COUNT; i++) {
+    for(size_t i = 0; i < OutChannelCount; i++) {
         last_out[i] = 0;
     }
 }
@@ -93,7 +93,7 @@ void MidiProcessor::midi_task(void* parameter) {
 
 void MidiProcessor::out_pitch(int ch, int note)
 {
-    if(ch >= PWM_COUNT) return;
+    if(ch >= OutChannelCount) return;
     if(ch < 0) return;
 
     Serial.printf("out_pitch: %d, %d\n", ch, note);
@@ -113,7 +113,7 @@ void MidiProcessor::out_pitch(int ch, int note)
 
 void MidiProcessor::out_7bit_value(int pwm_ch, int value)
 {
-    if(pwm_ch >= PWM_COUNT) return;
+    if(pwm_ch >= OutChannelCount) return;
     if(pwm_ch < 0) return;
 
     Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
@@ -131,7 +131,7 @@ void MidiProcessor::out_7bit_value(int pwm_ch, int value)
 
 void MidiProcessor::out_gate(int pwm_ch, int velocity)
 {
-    if(pwm_ch >= PWM_COUNT) return;
+    if(pwm_ch >= OutChannelCount) return;
     if(pwm_ch < 0) return;
 
     Serial.printf("out_gate: %d, %d\n", pwm_ch, velocity);
@@ -151,20 +151,20 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
 
 void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
     Serial.printf("handle_note_on: %d, %d, %d\n", channel, note, velocity);
-    
-    if (!is_channel_match(channel)) return;
 
     if (velocity == 0) {
         handle_note_off(channel, note, velocity);
         return;
     }
 
-    if (!note_history.push(note)) {
+    if (!note_history[channel].push(note)) {
         // Note already in use. Skipping.
         return;
     }
 
-    for (int i = 0; i < PWM_COUNT; i++) {
+    for (int i = 0; i < OutChannelCount; i++) {
+        if (!is_out_channel_match(i, channel)) continue;
+
         MidiOutType type = state->get_midi_out_type(i);
         if (type == MidiOutType::MidiOutGate) {
             out_gate(i, velocity);
@@ -182,15 +182,15 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
 void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
     Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
     
-    if (!is_channel_match(channel)) return;
-    
     uint8_t prev_note;
-    if (!note_history.pop(note, prev_note)) {
+    if (!note_history[channel].pop(note, prev_note)) {
         // Note not in use. Skipping.
         return;
     }
 
-    for (int i = 0; i < PWM_COUNT; i++) {
+    for (int i = 0; i < OutChannelCount; i++) {
+        if (!is_out_channel_match(i, channel)) continue;
+        
         if (prev_note == NoteHistory::NO_NOTE) {
             if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
                 out_gate(i, 0);
@@ -213,9 +213,9 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
 }
 
 void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
-    if (!is_channel_match(channel)) return;
-
-    for (int i = 0; i < PWM_COUNT; i++) {
+    for (int i = 0; i < OutChannelCount; i++) {
+        if (!is_out_channel_match(i, channel)) continue;
+        
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
             out_7bit_value(i, value);
             last_out[i] = value;
@@ -224,9 +224,9 @@ void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
 }
 
 void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
-    if (!is_channel_match(channel)) return;
-
-    for (int i = 0; i < PWM_COUNT; i++) {
+    for (int i = 0; i < OutChannelCount; i++) {
+        if (!is_out_channel_match(i, channel)) continue;
+        
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
             out_7bit_value(i, value);
             last_out[i] = value;
@@ -235,9 +235,9 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
 }
 
 void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
-    if (!is_channel_match(channel)) return;
-
-    for (int i = 0; i < PWM_COUNT; i++) {
+    for (int i = 0; i < OutChannelCount; i++) {
+        if (!is_out_channel_match(i, channel)) continue;
+        
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
             // TODO: implement
             last_out[i] = value;

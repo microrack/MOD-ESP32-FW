@@ -20,12 +20,16 @@ typedef struct {
     bool isPwm;
 } OutChannel;
 
-const size_t PWM_COUNT = 5;
-const int PWM_0_PIN = 26;
-const int PWM_1_PIN = 25;
-const int PWM_2_PIN = 33;
+enum OutChannelName {
+    OutChannelA,
+    OutChannelB,
+    OutChannelC,
+    OutChannelClk,
+    OutChannelRst,
+    OutChannelCount,
+};
 
-const OutChannel OUT_CHANNELS[PWM_COUNT] = {
+const OutChannel OUT_CHANNELS[OutChannelCount] = {
     {26, true},
     {25, true},
     {33, true},

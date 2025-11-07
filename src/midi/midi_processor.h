@@ -19,7 +19,7 @@ public:
     void handle_start(void);
     void handle_stop(void);
 
-    uint8_t last_out[PWM_COUNT];
+    uint8_t last_out[OutChannelCount];
 
 private:
     static constexpr float PWM_NOTE_SCALE = (1 << PWM_RESOLUTION) / (12 * 10.99); // 10.99 Vpp, 12 notes per octave (1 V/oct)
@@ -27,7 +27,7 @@ private:
     static const int MIDDLE_NOTE = 60; // C4 (middle C)
 
     MidiSettingsState* state;
-    NoteHistory note_history;
+    NoteHistory note_history[MIDI_CHANNEL_COUNT];
     TaskHandle_t midi_task_handle;
 
     void out_gate(int pwm_ch, int velocity);
@@ -35,8 +35,15 @@ private:
     void out_7bit_value(int pwm_ch, int value);
     static void midi_task(void* parameter);
 
-    inline bool is_channel_match(uint8_t channel) const {
+    inline bool is_global_channel_match(uint8_t channel) const {
         return (state->get_midi_channel() == channel) ||
                (state->get_midi_channel() == MidiChannelAll);
+    }
+
+    inline bool is_out_channel_match(int out_channel, uint8_t channel) const {
+        if(state->get_midi_out_channel(out_channel) == MidiChannelUnchanged) return is_global_channel_match(channel);
+
+        return (state->get_midi_out_channel(out_channel) == channel) ||
+               (state->get_midi_out_channel(out_channel) == MidiChannelAll);
     }
 };

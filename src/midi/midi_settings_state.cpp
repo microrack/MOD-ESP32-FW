@@ -51,7 +51,7 @@ esp_err_t MidiSettingsState::store_nvs(void) {
         return err;
     }
 
-    for (size_t i = 0; i < PWM_COUNT; i++) {
+    for (size_t i = 0; i < OutChannelCount; i++) {
         char key[10];
         snprintf(key, sizeof(key), "out_t%zu", i);
         err = nvs_set_u32(nvs_handle, key, (uint32_t)midi_out_type[i]);
@@ -62,7 +62,7 @@ esp_err_t MidiSettingsState::store_nvs(void) {
         }
     }
 
-    for (size_t i = 0; i < PWM_COUNT; i++) {
+    for (size_t i = 0; i < OutChannelCount; i++) {
         char key[10];
         snprintf(key, sizeof(key), "out_c%zu", i);
         err = nvs_set_u32(nvs_handle, key, (uint32_t)midi_out_channel[i]);
@@ -139,7 +139,7 @@ esp_err_t MidiSettingsState::recall_nvs(void) {
         return err;
     }
 
-    for (size_t i = 0; i < PWM_COUNT; i++) {
+    for (size_t i = 0; i < OutChannelCount; i++) {
         char key[10];
         snprintf(key, sizeof(key), "out_t%zu", i);
         uint32_t type_val;
@@ -155,7 +155,7 @@ esp_err_t MidiSettingsState::recall_nvs(void) {
         }
     }
 
-    for (size_t i = 0; i < PWM_COUNT; i++) {
+    for (size_t i = 0; i < OutChannelCount; i++) {
         char key[10];
         snprintf(key, sizeof(key), "out_c%zu", i);
         uint32_t ch_val;
@@ -209,7 +209,7 @@ void MidiSettingsState::set_midi_channel(MidiChannel ch) {
 
 void MidiSettingsState::set_midi_out_type(size_t idx, MidiOutType type) {
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
-        if (idx < PWM_COUNT) {
+        if (idx < OutChannelCount) {
             this->midi_out_type[idx] = type;
         }
         xSemaphoreGive(state_mutex);
@@ -218,7 +218,7 @@ void MidiSettingsState::set_midi_out_type(size_t idx, MidiOutType type) {
 
 void MidiSettingsState::set_midi_out_channel(size_t idx, MidiChannel ch) {
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
-        if (idx < PWM_COUNT) {
+        if (idx < OutChannelCount) {
             this->midi_out_channel[idx] = ch;
         }
         xSemaphoreGive(state_mutex);
@@ -242,7 +242,7 @@ int MidiSettingsState::get_bpm(void) {
 }
 
 MidiChannel MidiSettingsState::get_midi_channel(void) {
-    MidiChannel result = MidiChannel0;
+    MidiChannel result = MidiChannel1;
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
         result = this->midi_channel;
         xSemaphoreGive(state_mutex);
@@ -253,7 +253,7 @@ MidiChannel MidiSettingsState::get_midi_channel(void) {
 MidiOutType MidiSettingsState::get_midi_out_type(size_t idx) {
     MidiOutType result = MidiOutGate;
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
-        if (idx < PWM_COUNT) {
+        if (idx < OutChannelCount) {
             result = this->midi_out_type[idx];
         }
         xSemaphoreGive(state_mutex);
@@ -262,9 +262,9 @@ MidiOutType MidiSettingsState::get_midi_out_type(size_t idx) {
 }
 
 MidiChannel MidiSettingsState::get_midi_out_channel(size_t idx) {
-    MidiChannel result = MidiChannel0;
+    MidiChannel result = MidiChannelUnchanged;
     if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
-        if (idx < PWM_COUNT) {
+        if (idx < OutChannelCount) {
             result = this->midi_out_channel[idx];
         }
         xSemaphoreGive(state_mutex);
@@ -305,16 +305,24 @@ const char* MidiSettingsState::get_midi_clk_type_str(void) {
     return midi_clk_type_to_string(type);
 }
 
+const char* MidiSettingsState::get_midi_out_channel_str(size_t idx) {
+    MidiChannel ch = get_midi_out_channel(idx);
+    return midi_channel_to_string(ch);
+}
+
 const char* MidiSettingsState::midi_channel_to_string(MidiChannel ch) {
     if (ch == MidiChannelAll) {
         return "all";
     }
-    if (ch >= MidiChannel0 && ch <= MidiChannel16) {
+    if (ch == MidiChannelUnchanged) {
+        return "---";
+    }
+    if (ch >= MidiChannel1 && ch <= MidiChannel16) {
         static char buf[10];
         snprintf(buf, sizeof(buf), "%d", (int)ch);
         return buf;
     }
-    return "unknown";
+    return "?";
 }
 
 const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
@@ -344,7 +352,7 @@ const char* MidiSettingsState::midi_clk_type_to_string(MidiClkType type) {
 }
 
 int MidiSettingsState::get_max_midi_out_type(size_t idx) {
-    if (idx >= PWM_COUNT) return 0;
+    if (idx >= OutChannelCount) return 0;
     if (idx < 0) return 0;
 
     if (OUT_CHANNELS[idx].isPwm) {
@@ -355,7 +363,7 @@ int MidiSettingsState::get_max_midi_out_type(size_t idx) {
 }
 
 int MidiSettingsState::get_min_midi_out_type(size_t idx) {
-    if (idx >= PWM_COUNT) return 0;
+    if (idx >= OutChannelCount) return 0;
     if (idx < 0) return 0;
 
     if (OUT_CHANNELS[idx].isPwm) {
@@ -368,7 +376,7 @@ int MidiSettingsState::get_min_midi_out_type(size_t idx) {
 void MidiSettingsState::set_default(void) {
     bpm = 120;
     midi_channel = MidiChannelAll;
-    for (size_t i = 0; i < PWM_COUNT; i++) {
+    for (size_t i = 0; i < OutChannelCount; i++) {
         midi_out_type[i] = MidiOutPitch;
         midi_out_channel[i] = MidiChannelAll;
     }

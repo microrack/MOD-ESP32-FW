@@ -11,7 +11,7 @@ enum MidiClkType {
 };
 
 enum MidiChannel {
-    MidiChannel0   = 0,
+    MidiChannelUnchanged   = 0,
     MidiChannel1   = 1,
     MidiChannel2   = 2,
     MidiChannel3   = 3,
@@ -30,6 +30,8 @@ enum MidiChannel {
     MidiChannel16  = 16,
     MidiChannelAll = 17
 };
+
+const int MIDI_CHANNEL_COUNT = 16;
 
 enum MidiOutType {
     MidiOutGate,
@@ -171,8 +173,6 @@ class MidiSettingsState {
 public:
     const static int MAX_BPM = 255;
     const static int MIN_BPM = 1;
-    const static int MAX_MIDI_CHANNEL = MidiChannelAll;
-    const static int MIN_MIDI_CHANNEL = MidiChannel0;
     const static int MAX_MIDI_OUT_TYPE = MidiOutCc127;
     const static int MIN_MIDI_OUT_TYPE = MidiOutGate;
     const static int MAX_MIDI_CLK_TYPE = MidiClkExt;
@@ -188,6 +188,7 @@ public:
     const char* get_bpm_str(void);
     const char* get_midi_channel_str(void);
     const char* get_midi_out_type_str(size_t idx);
+    const char* get_midi_out_channel_str(size_t idx);
     const char* get_midi_clk_type_str(void);
 
     void set_bpm(int bpm);
@@ -204,18 +205,22 @@ public:
 
     int get_max_bpm(void) { return MAX_BPM; }
     int get_min_bpm(void) { return MIN_BPM; }
-    int get_max_midi_channel(void) { return MAX_MIDI_CHANNEL; }
-    int get_min_midi_channel(void) { return MIN_MIDI_CHANNEL; }
+    int get_max_midi_channel(void) { return MidiChannelAll; }
+    int get_min_midi_channel(void) { return MidiChannel1; }
+    int get_max_midi_out_channel(void) { return MidiChannelAll; }
+    int get_min_midi_out_channel(void) { return MidiChannelUnchanged; }
     int get_max_midi_out_type(size_t idx);
     int get_min_midi_out_type(size_t idx);
     int get_max_midi_clk_type(void) { return MAX_MIDI_CLK_TYPE; }
     int get_min_midi_clk_type(void) { return MIN_MIDI_CLK_TYPE; }
+
+    
     
 private:
     int bpm;
     MidiChannel midi_channel;
-    MidiOutType midi_out_type[PWM_COUNT];
-    MidiChannel midi_out_channel[PWM_COUNT];
+    MidiOutType midi_out_type[OutChannelCount];
+    MidiChannel midi_out_channel[OutChannelCount];
     MidiClkType midi_clk_type;
     SemaphoreHandle_t state_mutex;
 

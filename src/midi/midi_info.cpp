@@ -12,7 +12,7 @@ void MidiInfo::set_screen_switcher(ScreenSwitcher* screen_switcher) {
 }
 
 void MidiInfo::enter() {
-    
+
 }
 
 void MidiInfo::exit() {
@@ -35,13 +35,17 @@ void MidiInfo::render() {
             state->get_midi_channel_str(),
             state->get_midi_clk_type_str());
     display->println(buffer);
-    display->println();
+    display->print("         ");
+    display->print(processor->last_out[OutChannelClk] > 0 ? "[CLK]" : " CLK ");
+    display->print(" ");
+    display->println(processor->last_out[OutChannelRst] > 0 ? "[RST]" : " RST ");
 
-    sprintf(buffer, "A: %s %d", state->get_midi_out_type_str(0), processor->last_out[0]);
+
+    sprintf(buffer, "A: %s %d", state->get_midi_out_type_str(OutChannelA), processor->last_out[OutChannelA]);
     display->println(buffer);
-    sprintf(buffer, "B: %s %d", state->get_midi_out_type_str(1), processor->last_out[1]);
+    sprintf(buffer, "B: %s %d", state->get_midi_out_type_str(OutChannelB), processor->last_out[OutChannelB]);
     display->println(buffer);
-    sprintf(buffer, "C: %s %d", state->get_midi_out_type_str(2), processor->last_out[2]);
+    sprintf(buffer, "C: %s %d", state->get_midi_out_type_str(OutChannelC), processor->last_out[OutChannelC]);
     display->println(buffer);
 
     display->display();
