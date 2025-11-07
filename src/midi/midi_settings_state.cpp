@@ -52,8 +52,8 @@ esp_err_t MidiSettingsState::store_nvs(void) {
     }
 
     for (size_t i = 0; i < PWM_COUNT; i++) {
-        char key[20];
-        snprintf(key, sizeof(key), "midi_out_type_%zu", i);
+        char key[10];
+        snprintf(key, sizeof(key), "out_t%zu", i);
         err = nvs_set_u32(nvs_handle, key, (uint32_t)midi_out_type[i]);
         if (err != ESP_OK) {
             Serial.printf("store_nvs: failed to set %s, err=0x%x\n", key, err);
@@ -63,8 +63,8 @@ esp_err_t MidiSettingsState::store_nvs(void) {
     }
 
     for (size_t i = 0; i < PWM_COUNT; i++) {
-        char key[25];
-        snprintf(key, sizeof(key), "midi_out_channel_%zu", i);
+        char key[10];
+        snprintf(key, sizeof(key), "out_c%zu", i);
         err = nvs_set_u32(nvs_handle, key, (uint32_t)midi_out_channel[i]);
         if (err != ESP_OK) {
             Serial.printf("store_nvs: failed to set %s, err=0x%x\n", key, err);
@@ -103,6 +103,9 @@ void MidiSettingsState::recall(void) {
 }
 
 esp_err_t MidiSettingsState::recall_nvs(void) {
+    // First set defaults, then override with values from NVS
+    set_default();
+    
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
     if (err != ESP_OK) {
@@ -110,60 +113,83 @@ esp_err_t MidiSettingsState::recall_nvs(void) {
         return err;
     }
 
+    bool needs_save = false;
+
     uint32_t bpm_val;
     err = nvs_get_u32(nvs_handle, "bpm", &bpm_val);
-    if (err != ESP_OK) {
+    if (err == ESP_OK) {
+        bpm = (int)bpm_val;
+    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+        needs_save = true;
+    } else {
         Serial.printf("recall_nvs: failed to get bpm, err=0x%x\n", err);
         nvs_close(nvs_handle);
         return err;
     }
-    bpm = (int)bpm_val;
 
     uint32_t ch_val;
     err = nvs_get_u32(nvs_handle, "midi_channel", &ch_val);
-    if (err != ESP_OK) {
+    if (err == ESP_OK) {
+        midi_channel = (MidiChannel)ch_val;
+    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+        needs_save = true;
+    } else {
         Serial.printf("recall_nvs: failed to get midi_channel, err=0x%x\n", err);
         nvs_close(nvs_handle);
         return err;
     }
-    midi_channel = (MidiChannel)ch_val;
 
     for (size_t i = 0; i < PWM_COUNT; i++) {
-        char key[20];
-        snprintf(key, sizeof(key), "midi_out_type_%zu", i);
+        char key[10];
+        snprintf(key, sizeof(key), "out_t%zu", i);
         uint32_t type_val;
         err = nvs_get_u32(nvs_handle, key, &type_val);
-        if (err != ESP_OK) {
+        if (err == ESP_OK) {
+            midi_out_type[i] = (MidiOutType)type_val;
+        } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+            needs_save = true;
+        } else {
             Serial.printf("recall_nvs: failed to get %s, err=0x%x\n", key, err);
             nvs_close(nvs_handle);
             return err;
         }
-        midi_out_type[i] = (MidiOutType)type_val;
     }
 
     for (size_t i = 0; i < PWM_COUNT; i++) {
-        char key[25];
-        snprintf(key, sizeof(key), "midi_out_channel_%zu", i);
+        char key[10];
+        snprintf(key, sizeof(key), "out_c%zu", i);
         uint32_t ch_val;
         err = nvs_get_u32(nvs_handle, key, &ch_val);
-        if (err != ESP_OK) {
+        if (err == ESP_OK) {
+            midi_out_channel[i] = (MidiChannel)ch_val;
+        } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+            needs_save = true;
+        } else {
             Serial.printf("recall_nvs: failed to get %s, err=0x%x\n", key, err);
             nvs_close(nvs_handle);
             return err;
         }
-        midi_out_channel[i] = (MidiChannel)ch_val;
     }
 
     uint32_t clk_val;
     err = nvs_get_u32(nvs_handle, "midi_clk_type", &clk_val);
-    if (err != ESP_OK) {
+    if (err == ESP_OK) {
+        midi_clk_type = (MidiClkType)clk_val;
+    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+        needs_save = true;
+    } else {
         Serial.printf("recall_nvs: failed to get midi_clk_type, err=0x%x\n", err);
         nvs_close(nvs_handle);
         return err;
     }
-    midi_clk_type = (MidiClkType)clk_val;
 
     nvs_close(nvs_handle);
+    
+    // If any keys were missing, save all values to create them
+    if (needs_save) {
+        return ESP_ERR_NVS_NOT_FOUND; // Signal that save is needed
+    }
+    
     return ESP_OK;
 }
 
