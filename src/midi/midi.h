@@ -17,7 +17,7 @@ enum MidiScreen {
 
 class MidiRoot : public ScreenInterface {
 public:
-    MidiRoot(Display* display);
+    MidiRoot(Display* display, MidiSettingsState* state, MidiProcessor* processor);
     void begin(void);
     void enter() override;
     void exit() override;
@@ -28,6 +28,6 @@ private:
     MidiSettings midi_settings;
     ScreenInterface* midi_screens[MidiScreen::MidiScreenCount];
     ScreenSwitcher screen_switcher;
-    MidiSettingsState state;
-    MidiProcessor processor;
+    MidiSettingsState* state;
+    MidiProcessor* processor;
 };

@@ -1,10 +1,11 @@
 #include "midi.h"
 
-MidiRoot::MidiRoot(Display* display)
+MidiRoot::MidiRoot(Display* display, MidiSettingsState* state, MidiProcessor* processor)
     : ScreenInterface(display),
-      midi_info(display, &state, &processor, nullptr),
-      midi_settings(display, &state, nullptr),
-      processor(&state) {
+      midi_info(display, state, processor, nullptr),
+      midi_settings(display, state, nullptr),
+      state(state),
+      processor(processor) {
 
     // Initialize MIDI screens array
     midi_screens[MidiScreen::MidiScreenInfo] = &midi_info;
@@ -19,9 +20,7 @@ MidiRoot::MidiRoot(Display* display)
 }
 
 void MidiRoot::begin(void) {
-    // Initialize all MIDI components
-    state.begin();
-    processor.begin();
+    
 }
 
 void MidiRoot::enter() {

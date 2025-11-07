@@ -10,6 +10,8 @@
 #include "input/input.h"
 #include "oscilloscope/oscilloscope.h"
 #include "midi/midi.h"
+#include "midi/midi_settings_state.h"
+#include "midi/midi_processor.h"
 #include "screen_switcher.h"
 
 // Create display object
@@ -18,9 +20,13 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // Create input handler
 Input input_handler;
 
+// Create MIDI settings state and processor
+MidiSettingsState midi_settings_state;
+MidiProcessor midi_processor(&midi_settings_state);
+
 // Create screen objects
 OscilloscopeRoot oscilloscope_screen(&display);
-MidiRoot midi_screen(&display);
+MidiRoot midi_screen(&display, &midi_settings_state, &midi_processor);
 
 // Create screen array and switcher
 ScreenInterface* screens[] = {&oscilloscope_screen, &midi_screen};
@@ -67,6 +73,10 @@ void setup() {
     pixels.setPixelColor(0, pixels.Color(0, 0, 2));
     pixels.show();
 
+    // Initialize MIDI settings and processor
+    midi_settings_state.begin();
+    midi_processor.begin();
+
     // Initialize MIDI screen components
     midi_screen.begin();
 
@@ -91,5 +101,5 @@ void loop() {
     // Update current screen
     screen_switcher.update(&event);
 
-    Event::print(event);
+    // Event::print(event);
 }
