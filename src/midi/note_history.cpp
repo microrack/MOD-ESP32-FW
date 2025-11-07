@@ -1,4 +1,5 @@
 #include "note_history.h"
+#include <Arduino.h>
 
 void NoteHistory::Note::reset(void)
 {
@@ -8,20 +9,30 @@ void NoteHistory::Note::reset(void)
 }
 
 bool NoteHistory::push(uint8_t note) {
+    Serial.printf("  pushing note: %d\n", note);
+    
     if (history[note].in_use) {
+        Serial.println("  push FAILED: note already in use");
         return false;
     }
 
     history[note].in_use = true;
     history[note].prev = last;
-    history[last].next = note;
+    if (last != NO_NOTE) {
+        history[last].next = note;
+    }
     last = note;
+    
     return true;
 }
 
-bool NoteHistory::pop(uint8_t note, uint8_t & prev_note) {
-    if (!history[note].in_use)
+bool NoteHistory::pop(uint8_t note) {
+    Serial.printf("  popping note: %d\n", note);
+    
+    if (!history[note].in_use) {
+        Serial.println("  pop FAILED: note not in use");
         return false;
+    }
 
     uint8_t prev = history[note].prev;
     uint8_t next = history[note].next;
@@ -31,12 +42,13 @@ bool NoteHistory::pop(uint8_t note, uint8_t & prev_note) {
         history[next].prev = prev;
     } else {
         last = prev;
-        history[prev].next = NO_NOTE;
+        if (prev != NO_NOTE) {
+            history[prev].next = NO_NOTE;
+        }
     }
 
-    prev_note = prev;
-
     history[note].reset();
+
     return true;
 }
 
@@ -70,4 +82,13 @@ bool NoteHistory::is_empty(void) {
 
 uint8_t NoteHistory::get_last(void) {
     return last;
+}
+
+uint8_t NoteHistory::get_current(void) {
+    for (int i = MIDI_NOTES_COUNT - 1; i >= 0; i--) {
+        if (history[i].in_use) {
+            return i;
+        }
+    }
+    return NO_NOTE;
 }

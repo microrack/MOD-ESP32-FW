@@ -181,17 +181,18 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
 
 void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
     Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
-    
-    uint8_t prev_note;
-    if (!note_history[channel].pop(note, prev_note)) {
+
+    if (!note_history[channel].pop(note)) {
         // Note not in use. Skipping.
         return;
     }
 
+    uint8_t current_note = note_history[channel].get_current();
+
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
         
-        if (prev_note == NoteHistory::NO_NOTE) {
+        if (current_note == NoteHistory::NO_NOTE) {
             if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
                 out_gate(i, 0);
                 last_out[i] = 0;
@@ -200,13 +201,14 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
                 out_7bit_value(i, 0);
                 last_out[i] = 0;
             }
-        } else {
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
-                // Restore previous note
-                if (prev_note != NoteHistory::NO_NOTE) {
-                    out_pitch(i, prev_note);
-                    last_out[i] = prev_note;
-                }
+        }
+
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+
+            // keep last note CV after note off
+            if (current_note != NoteHistory::NO_NOTE) {
+                out_pitch(i, current_note);
+                last_out[i] = current_note;
             }
         }
     }
