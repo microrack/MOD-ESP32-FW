@@ -35,10 +35,13 @@ private:
     
     // Clock frequency measurement
     static constexpr int CLOCK_TICKS_PER_BEAT = 24; // MIDI clock sends 24 ticks per quarter note
+    static constexpr unsigned long CLOCK_DURATION = 50; // Clock pulse duration in milliseconds
     unsigned long clock_last_time;
     int clock_tick_count;
     unsigned long clock_measurement_start;
+    unsigned long clock_gate_start; // Time when clock gate was raised
 
+    void clock_routine(void);
     void out_gate(int pwm_ch, int velocity);
     void out_pitch(int pwm_ch, int note, int pitchbend_value = 0);
     void out_7bit_value(int pwm_ch, int value);

@@ -332,6 +332,7 @@ const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
         case MidiOutVelocity:    return "velocity";
         case MidiOutAfterTouch:  return "aftertouch";
         case MidiOutPitchBend:   return "pitchbend";
+        case MidiOutClock:       return "clock";
         default:
             if (type >= MidiOutCc0 && type <= MidiOutCc127) {
                 static char buf[8];
@@ -369,7 +370,7 @@ int MidiSettingsState::get_min_midi_out_type(size_t idx) {
     if (OUT_CHANNELS[idx].isPwm) {
         return MIN_MIDI_OUT_TYPE;
     } else {
-        return MidiOutGate;
+        return MidiOutClock;
     }
 }
 
