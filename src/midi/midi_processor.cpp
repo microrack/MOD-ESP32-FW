@@ -145,11 +145,12 @@ AudioOutput updateAudio() {
     }
     
     AudioOutputStorage_t left_val, right_val;
+
+    int8_t osc = aSin1.next();
     
     // Left channel (index 0)
     if (mozzi_processor->osc_enabled[0]) {
-        int8_t osc = aSin1.next();
-        left_val = StereoOutput::from8Bit(osc, 0).l();
+        left_val = MonoOutput::from8Bit(osc);
     } else {
         // mozzi_out contains zero-centered values, use directly
         left_val = mozzi_processor->mozzi_out[0];
@@ -157,8 +158,7 @@ AudioOutput updateAudio() {
     
     // Right channel (index 1)
     if (mozzi_processor->osc_enabled[1]) {
-        int8_t osc = aSin1.next();
-        right_val = StereoOutput::from8Bit(0, osc).r();
+        right_val = MonoOutput::from8Bit(osc);
     } else {
         // mozzi_out contains zero-centered values, use directly
         right_val = mozzi_processor->mozzi_out[1];
