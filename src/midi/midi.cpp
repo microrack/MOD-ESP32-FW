@@ -3,7 +3,7 @@
 MidiRoot::MidiRoot(Display* display, MidiSettingsState* state, MidiProcessor* processor)
     : ScreenInterface(display),
       midi_info(display, state, processor, nullptr),
-      midi_settings(display, state, nullptr),
+      midi_settings(display, state, processor, nullptr),
       state(state),
       processor(processor) {
 

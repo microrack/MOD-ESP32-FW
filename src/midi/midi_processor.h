@@ -20,6 +20,8 @@ public:
     void handle_stop(void);
 
     uint8_t last_out[OutChannelCount];
+    uint8_t last_cc[MIDI_CHANNEL_COUNT]; // Last CC number per channel
+    int pitchbend[MIDI_CHANNEL_COUNT]; // Raw pitchbend value per channel
 
 private:
     static constexpr float PWM_NOTE_SCALE = (1 << PWM_RESOLUTION) / (12 * 10.99); // 10.99 Vpp, 12 notes per octave (1 V/oct)
@@ -30,7 +32,7 @@ private:
     MidiSettingsState* state;
     NoteHistory note_history[MIDI_CHANNEL_COUNT];
     TaskHandle_t midi_task_handle;
-    int pitchbend[MIDI_CHANNEL_COUNT]; // Raw pitchbend value per channel
+    
 
     void out_gate(int pwm_ch, int velocity);
     void out_pitch(int pwm_ch, int note, int pitchbend_value = 0);

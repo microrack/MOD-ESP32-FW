@@ -71,6 +71,7 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     // Initialize pitchbend to center (0 = no bend)
     for(size_t i = 0; i < MIDI_CHANNEL_COUNT; i++) {
         pitchbend[i] = 0;
+        last_cc[i] = 0;
     }
 }
 
@@ -224,6 +225,9 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
 }
 
 void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
+    // Store last CC number for the channel
+    last_cc[channel] = cc;
+
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
         

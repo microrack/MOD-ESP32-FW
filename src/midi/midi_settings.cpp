@@ -2,8 +2,8 @@
 #include "midi_settings.h"
 #include "util.h"
 
-MidiSettings::MidiSettings(Display* display, MidiSettingsState* state, ScreenSwitcher* screen_switcher)
-    : ScreenInterface(display), state(state), screen_switcher(screen_switcher),
+MidiSettings::MidiSettings(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher)
+    : ScreenInterface(display), state(state), processor(processor), screen_switcher(screen_switcher),
       current_item(MENU_CHANNEL), is_editing(false), row_number(0) {}
 
 void MidiSettings::set_screen_switcher(ScreenSwitcher* screen_switcher) {
@@ -131,6 +131,12 @@ void MidiSettings::handle_input(Event* event) {
     } else {
         if (event->button_sw == ButtonPress) {
             is_editing = true;
+
+            // cleanup last cc array
+            for(int i = 0; i < MIDI_CHANNEL_COUNT; i++) {
+                processor->last_cc[i] = 128;
+                processor->pitchbend[i] = 0;
+            }
         }
 
         if(event->button_a == ButtonPress) {
@@ -223,6 +229,43 @@ void MidiSettings::handle_menu_input(Event* event) {
                 }
             }
         }
+    }
+
+    // MIDI learn
+    if(is_editing && (processor->last_cc[current_item] != 0 || processor->pitchbend[current_item] != 0)) {
+        const MenuItemInfo& item = items[current_item];
+        int idx = item.data.output_idx;
+        MidiChannel channel = state->get_midi_out_channel(idx);
+        if(channel == MidiChannelUnchanged) {
+            channel = state->get_midi_channel();
+        }
+
+        int last_cc = 128;
+        int last_pitchbend = 0;
+
+        if(channel != MidiChannelAll) {
+            last_cc = processor->last_cc[channel];
+            last_pitchbend = processor->pitchbend[channel];
+        } else {
+            for(int i = 0; i < MIDI_CHANNEL_COUNT; i++) {
+                if(processor->last_cc[i] != 128) {
+                    last_cc = processor->last_cc[i];
+                }
+                if(processor->pitchbend[i] != 0) {
+                    last_pitchbend = processor->pitchbend[i];
+                }
+            }
+        }
+
+        if(last_cc != 128) {
+            state->set_midi_out_type(idx, (MidiOutType)((int)MidiOutType::MidiOutCc0 + last_cc));
+        }
+        if(last_pitchbend != 0) {
+            state->set_midi_out_type(idx, MidiOutType::MidiOutPitchBend);
+        }
+
+        processor->last_cc[current_item] = 0;
+        processor->pitchbend[current_item] = 0;
     }
 }
 
