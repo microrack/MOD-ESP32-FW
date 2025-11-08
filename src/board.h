@@ -15,6 +15,9 @@ const int ENCODER_SW = 39;
 const int ENCODER_A = 34;
 const int ENCODER_B = 35;
 
+#define OUT_CHANNEL_A_PIN 26
+#define OUT_CHANNEL_B_PIN 25
+
 typedef struct {
     int pin;
     bool isPwm;
@@ -30,8 +33,8 @@ enum OutChannelName {
 };
 
 const OutChannel OUT_CHANNELS[OutChannelCount] = {
-    {26, true},
-    {25, true},
+    {OUT_CHANNEL_A_PIN, true},
+    {OUT_CHANNEL_B_PIN, true},
     {33, true},
     {12, false}, // clk
     {13, false}, // reset
@@ -46,8 +49,8 @@ const int MIDI_RX_PIN = 16;
 const int MIDI_TX_PIN = 17;
 
 // PWM parameters
-const uint32_t PWM_FREQ = 78125;
-const uint8_t  PWM_RESOLUTION = 10;
+#define PWM_FREQ 32768;
+#define PWM_RESOLUTION 10
 const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
 
 // Debug serial configuration

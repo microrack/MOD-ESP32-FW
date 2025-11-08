@@ -2,8 +2,13 @@
 #include "midi_processor.h"
 
 #include <MozziConfigValues.h>
-#define MOZZI_AUDIO_MODE MOZZI_OUTPUT_INTERNAL_DAC
+#define MOZZI_AUDIO_MODE MOZZI_OUTPUT_PWM
 #define MOZZI_CONTROL_RATE 1024
+#define MOZZI_AUDIO_BITS PWM_RESOLUTION
+#define MOZZI_AUDIO_RATE PWM_FREQ
+#define MOZZI_AUDIO_CHANNELS 2
+#define MOZZI_AUDIO_PIN_1 OUT_CHANNEL_A_PIN
+#define MOZZI_AUDIO_PIN_2 OUT_CHANNEL_B_PIN
 #include <Mozzi.h>
 #include <AudioOutput.h>
 #include <Oscil.h>
@@ -112,7 +117,8 @@ void updateControl() {
 }
 
 AudioOutput updateAudio() {
-    return MonoOutput::from8Bit(aSin1.next());
+    int8_t osc = aSin1.next();
+    return StereoOutput::from8Bit(osc, osc);
 }
 
 void MidiProcessor::midi_task(void* parameter) {
