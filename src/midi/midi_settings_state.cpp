@@ -338,6 +338,8 @@ const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
         case MidiOutClock1_32:   return "clock1/32";
         case MidiOutClock1_8T:   return "clock1/8T";
         case MidiOutClock1_16T:  return "clock1/16T";
+        case MidiOutRun:         return "run";
+        case MidiOutStop:        return "stop";
         default:
             if (type >= MidiOutCc0 && type <= MidiOutCc127) {
                 static char buf[8];

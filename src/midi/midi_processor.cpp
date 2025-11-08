@@ -79,6 +79,13 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     clock_tick_count = 0;
     clock_measurement_start = 0;
     internal_clock_last_tick_time = 0;
+
+    for (size_t i = 0; i < OutChannelCount; i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
+            out_gate(i, 255);
+            last_out[i] = 255;
+        }
+    }
 }
 
 void MidiProcessor::begin(void) {
@@ -390,10 +397,37 @@ void MidiProcessor::handle_start(void) {
         }
     }
     
-    if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
+    // Handle MidiOutRun outputs
+    for (size_t i = 0; i < OutChannelCount; i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutRun) {
+            out_gate(i, 255);
+            last_out[i] = 255;
+        }
+    }
+
+    // Handle MidiOutStop outputs
+    for (size_t i = 0; i < OutChannelCount; i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
+            out_gate(i, 0);
+            last_out[i] = 0;
+        }
+    }
 }
 
 void MidiProcessor::handle_stop(void) {
-    if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
+    // Handle MidiOutStop outputs
+    for (size_t i = 0; i < OutChannelCount; i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
+            out_gate(i, 255);
+            last_out[i] = 255;
+        }
+    }
 
+    // Handle MidiOutRun outputs
+    for (size_t i = 0; i < OutChannelCount; i++) {
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutRun) {
+            out_gate(i, 0);
+            last_out[i] = 0;
+        }
+    }
 }

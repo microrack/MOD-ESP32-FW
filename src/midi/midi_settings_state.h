@@ -40,6 +40,8 @@ enum MidiOutType {
     MidiOutClock1_32,
     MidiOutClock1_8T,
     MidiOutClock1_16T,
+    MidiOutRun,
+    MidiOutStop,
     MidiOutGate,
     MidiOutPitch,
     MidiOutVelocity,
