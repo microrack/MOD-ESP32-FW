@@ -332,6 +332,7 @@ const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
         case MidiOutVelocity:    return "velocity";
         case MidiOutAfterTouch:  return "aftertouch";
         case MidiOutPitchBend:   return "pitchbend";
+        case MidiOutMozzi:       return "mozzi";
         case MidiOutClock1_4:    return "clock1/4";
         case MidiOutClock1_8:    return "clock1/8";
         case MidiOutClock1_16:   return "clock1/16";

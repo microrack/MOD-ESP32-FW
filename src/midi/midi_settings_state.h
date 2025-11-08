@@ -47,6 +47,7 @@ enum MidiOutType {
     MidiOutVelocity,
     MidiOutAfterTouch,
     MidiOutPitchBend,
+    MidiOutMozzi,
     MidiOutCc0,
     MidiOutCc1,
     MidiOutCc2,

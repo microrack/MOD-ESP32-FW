@@ -39,8 +39,8 @@ enum OutChannelName {
 };
 
 const OutChannel OUT_CHANNELS[OutChannelCount] = {
-    {OUT_CHANNEL_A_PIN, OutTypeMozzi},
-    {OUT_CHANNEL_B_PIN, OutTypeMozzi},
+    {0, OutTypeMozzi}, // pass value through mozzi left
+    {1, OutTypeMozzi}, // pass value through mozzi right
     {33, OutTypePwm},
     {12, OutTypeGpio}, // clk
     {13, OutTypeGpio}, // reset
@@ -55,7 +55,7 @@ const int MIDI_RX_PIN = 16;
 const int MIDI_TX_PIN = 17;
 
 // PWM parameters
-#define PWM_FREQ 32768;
+#define PWM_FREQ 32768
 #define PWM_RESOLUTION 10
 const uint32_t PWM_MAX_VAL = (1 << PWM_RESOLUTION) - 1;
 

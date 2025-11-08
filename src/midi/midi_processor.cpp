@@ -4,15 +4,19 @@
 #include <MozziConfigValues.h>
 #define MOZZI_AUDIO_MODE MOZZI_OUTPUT_PWM
 #define MOZZI_CONTROL_RATE 1024
-#define MOZZI_AUDIO_BITS PWM_RESOLUTION
 #define MOZZI_AUDIO_RATE PWM_FREQ
 #define MOZZI_AUDIO_CHANNELS 2
 #define MOZZI_AUDIO_PIN_1 OUT_CHANNEL_A_PIN
 #define MOZZI_AUDIO_PIN_2 OUT_CHANNEL_B_PIN
+#define MOZZI_ANALOG_READ MOZZI_ANALOG_READ_NONE
 #include <Mozzi.h>
 #include <AudioOutput.h>
 #include <Oscil.h>
 #include <tables/sin2048_int8.h>
+
+#if(MOZZI_AUDIO_BITS != PWM_RESOLUTION)
+#error "MOZZI_AUDIO_BITS != PWM_RESOLUTION"
+#endif
 
 Oscil <SIN2048_NUM_CELLS, AUDIO_RATE> aSin1(SIN2048_DATA);
 
@@ -94,6 +98,12 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     clock_tick_count = 0;
     clock_measurement_start = 0;
     internal_clock_last_tick_time = 0;
+    
+    // Initialize Mozzi arrays
+    for(size_t i = 0; i < 2; i++) {
+        osc_enabled[i] = false;
+        mozzi_out[i] = 0;
+    }
 }
 
 void MidiProcessor::begin(void) {
@@ -109,16 +119,52 @@ void MidiProcessor::begin(void) {
     );
 }
 
-MidiProcessor* mozzi_processor = nullptr;
+static MidiProcessor* mozzi_processor = nullptr;
 
 void updateControl() {
     MIDI.read();
-    if (mozzi_processor != nullptr) mozzi_processor->clock_routine();
+    if (mozzi_processor != nullptr) {
+        mozzi_processor->clock_routine();
+        // Update osc_enabled based on output types
+        for (size_t i = 0; i < OutChannelCount; i++) {
+            if (OUT_CHANNELS[i].type == OutTypeMozzi) {
+                int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
+                if (mozzi_ch >= 0 && mozzi_ch < 2) {
+                    mozzi_processor->osc_enabled[mozzi_ch] = 
+                        (mozzi_processor->state->get_midi_out_type(i) == MidiOutType::MidiOutMozzi);
+                }
+            }
+        }
+    }
 }
 
 AudioOutput updateAudio() {
-    int8_t osc = aSin1.next();
-    return StereoOutput::from8Bit(osc, osc);
+    if (mozzi_processor == nullptr) {
+        int8_t osc = aSin1.next();
+        return StereoOutput::from8Bit(osc, osc);
+    }
+    
+    AudioOutputStorage_t left_val, right_val;
+    
+    // Left channel (index 0)
+    if (mozzi_processor->osc_enabled[0]) {
+        int8_t osc = aSin1.next();
+        left_val = StereoOutput::from8Bit(osc, 0).l();
+    } else {
+        // mozzi_out contains zero-centered values, use directly
+        left_val = mozzi_processor->mozzi_out[0];
+    }
+    
+    // Right channel (index 1)
+    if (mozzi_processor->osc_enabled[1]) {
+        int8_t osc = aSin1.next();
+        right_val = StereoOutput::from8Bit(0, osc).r();
+    } else {
+        // mozzi_out contains zero-centered values, use directly
+        right_val = mozzi_processor->mozzi_out[1];
+    }
+    
+    return StereoOutput(left_val, right_val);
 }
 
 void MidiProcessor::midi_task(void* parameter) {
@@ -209,13 +255,21 @@ void MidiProcessor::out_pitch(int ch, int note, int pitchbend_value)
 
     if(DEBUG_MIDI_PROCESSOR) Serial.printf("out_pitch: %d, %d (bend: %.2f)\n", ch, note, bend_semitones);
 
+    // Calculate value using PWM_ZERO_OFFSET (preserves carefully tuned offset)
     int v = (bent_note - MIDDLE_NOTE) * PWM_NOTE_SCALE + PWM_ZERO_OFFSET;
     if (v > int(PWM_MAX_VAL))
         return;
 
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[ch].pin;
-    if(OUT_CHANNELS[ch].type == OutTypeMozzi || OUT_CHANNELS[ch].type == OutTypePwm) {
+    if(OUT_CHANNELS[ch].type == OutTypeMozzi) {
+        // For Mozzi, convert to zero-centered format (Mozzi will add BIAS in audioOutput)
+        // This preserves the PWM_ZERO_OFFSET calibration
+        int mozzi_ch = pin; // pin contains mozzi channel index (0 or 1)
+        if (mozzi_ch >= 0 && mozzi_ch < 2) {
+            mozzi_out[mozzi_ch] = v - MOZZI_AUDIO_BIAS;
+        }
+    } else if(OUT_CHANNELS[ch].type == OutTypePwm) {
         ledcWrite(pin, v);
     } else {
         return;
@@ -229,14 +283,22 @@ void MidiProcessor::out_7bit_value(int pwm_ch, int value)
 
     if(DEBUG_MIDI_PROCESSOR) Serial.printf("out_7bit_value: %d, %d\n", pwm_ch, value);
     
+    // Calculate value using PWM_ZERO_OFFSET (preserves carefully tuned offset)
     int v = map(value, 0, (1 << 7) - 1, PWM_ZERO_OFFSET, PWM_MAX_VAL);
     
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[pwm_ch].pin;
-    if(OUT_CHANNELS[pwm_ch].type == OutTypeMozzi || OUT_CHANNELS[pwm_ch].type == OutTypePwm) {
+    if(OUT_CHANNELS[pwm_ch].type == OutTypeMozzi) {
+        // For Mozzi, convert to zero-centered format (Mozzi will add BIAS in audioOutput)
+        // This preserves the PWM_ZERO_OFFSET calibration
+        int mozzi_ch = pin; // pin contains mozzi channel index (0 or 1)
+        if (mozzi_ch >= 0 && mozzi_ch < 2) {
+            mozzi_out[mozzi_ch] = v - MOZZI_AUDIO_BIAS;
+        }
+    } else if(OUT_CHANNELS[pwm_ch].type == OutTypePwm) {
         ledcWrite(pin, v);
     } else {
-        digitalWrite(pin, v > 0 ? HIGH : LOW);
+        digitalWrite(pin, value > 0 ? HIGH : LOW);
     }
 }
 
@@ -249,7 +311,19 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
 
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[pwm_ch].pin;
-    if(OUT_CHANNELS[pwm_ch].type == OutTypeMozzi || OUT_CHANNELS[pwm_ch].type == OutTypePwm) {
+    if(OUT_CHANNELS[pwm_ch].type == OutTypeMozzi) {
+        // For Mozzi, convert to zero-centered format (Mozzi will add BIAS in audioOutput)
+        // This preserves the PWM_ZERO_OFFSET calibration
+        int mozzi_ch = pin; // pin contains mozzi channel index (0 or 1)
+        if (mozzi_ch >= 0 && mozzi_ch < 2) {
+            if (velocity == 0) {
+                mozzi_out[mozzi_ch] = PWM_ZERO_OFFSET - MOZZI_AUDIO_BIAS;
+            } else {
+                mozzi_out[mozzi_ch] = PWM_MAX_VAL - MOZZI_AUDIO_BIAS;
+            }
+        }
+    } else if(OUT_CHANNELS[pwm_ch].type == OutTypePwm) {
+        // For PWM, use original values with PWM_ZERO_OFFSET
         if (velocity == 0) {
             ledcWrite(pin, PWM_ZERO_OFFSET);
         } else {

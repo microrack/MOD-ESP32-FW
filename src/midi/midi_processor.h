@@ -8,6 +8,7 @@
 class MidiProcessor {
 public:
     MidiProcessor(MidiSettingsState* state);
+    MidiSettingsState* state;
 
     void begin(void);
     void handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity);
@@ -23,14 +24,16 @@ public:
     uint8_t last_out[OutChannelCount];
     uint8_t last_cc[MIDI_CHANNEL_COUNT]; // Last CC number per channel
     int pitchbend[MIDI_CHANNEL_COUNT]; // Raw pitchbend value per channel
+    
+    bool osc_enabled[2]; // MOZZI_AUDIO_CHANNELS
+    int mozzi_out[2]; // MOZZI_AUDIO_CHANNELS
 
 private:
     static constexpr float PWM_NOTE_SCALE = (1 << PWM_RESOLUTION) / (12 * 10.99); // 10.99 Vpp, 12 notes per octave (1 V/oct)
     static const int PWM_ZERO_OFFSET = 498; // 0 V at MIDDLE_NOTE
     static const int MIDDLE_NOTE = 60; // C4 (middle C)
     static constexpr float PITCHBEND_RANGE_SEMITONES = 2.0f; // Standard MIDI pitchbend range in semitones
-
-    MidiSettingsState* state;
+    
     NoteHistory note_history[MIDI_CHANNEL_COUNT];
     TaskHandle_t midi_task_handle;
     
