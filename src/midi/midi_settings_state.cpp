@@ -384,7 +384,7 @@ int MidiSettingsState::get_max_midi_out_type(size_t idx) {
     if (idx >= OutChannelCount) return 0;
     if (idx < 0) return 0;
 
-    if (OUT_CHANNELS[idx].isPwm) {
+    if (OUT_CHANNELS[idx].type == OutTypeMozzi || OUT_CHANNELS[idx].type == OutTypePwm) {
         return MAX_MIDI_OUT_TYPE;
     } else {
         return MidiOutGate;
@@ -395,7 +395,7 @@ int MidiSettingsState::get_min_midi_out_type(size_t idx) {
     if (idx >= OutChannelCount) return 0;
     if (idx < 0) return 0;
 
-    if (OUT_CHANNELS[idx].isPwm) {
+    if (OUT_CHANNELS[idx].type == OutTypeMozzi || OUT_CHANNELS[idx].type == OutTypePwm) {
         return MIN_MIDI_OUT_TYPE;
     } else {
         return MidiOutClock1_4;

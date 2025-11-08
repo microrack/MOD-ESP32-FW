@@ -18,9 +18,15 @@ const int ENCODER_B = 35;
 #define OUT_CHANNEL_A_PIN 26
 #define OUT_CHANNEL_B_PIN 25
 
+enum OutChannelType {
+    OutTypeMozzi,
+    OutTypePwm,
+    OutTypeGpio
+};
+
 typedef struct {
     int pin;
-    bool isPwm;
+    OutChannelType type;
 } OutChannel;
 
 enum OutChannelName {
@@ -33,11 +39,11 @@ enum OutChannelName {
 };
 
 const OutChannel OUT_CHANNELS[OutChannelCount] = {
-    {OUT_CHANNEL_A_PIN, true},
-    {OUT_CHANNEL_B_PIN, true},
-    {33, true},
-    {12, false}, // clk
-    {13, false}, // reset
+    {OUT_CHANNEL_A_PIN, OutTypeMozzi},
+    {OUT_CHANNEL_B_PIN, OutTypeMozzi},
+    {33, OutTypePwm},
+    {12, OutTypeGpio}, // clk
+    {13, OutTypeGpio}, // reset
 };
 
 const int ADC_0 = 36;

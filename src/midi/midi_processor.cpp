@@ -215,7 +215,7 @@ void MidiProcessor::out_pitch(int ch, int note, int pitchbend_value)
 
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[ch].pin;
-    if(OUT_CHANNELS[ch].isPwm) {
+    if(OUT_CHANNELS[ch].type == OutTypeMozzi || OUT_CHANNELS[ch].type == OutTypePwm) {
         ledcWrite(pin, v);
     } else {
         return;
@@ -233,7 +233,7 @@ void MidiProcessor::out_7bit_value(int pwm_ch, int value)
     
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[pwm_ch].pin;
-    if(OUT_CHANNELS[pwm_ch].isPwm) {
+    if(OUT_CHANNELS[pwm_ch].type == OutTypeMozzi || OUT_CHANNELS[pwm_ch].type == OutTypePwm) {
         ledcWrite(pin, v);
     } else {
         digitalWrite(pin, v > 0 ? HIGH : LOW);
@@ -249,7 +249,7 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
 
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[pwm_ch].pin;
-    if(OUT_CHANNELS[pwm_ch].isPwm) {
+    if(OUT_CHANNELS[pwm_ch].type == OutTypeMozzi || OUT_CHANNELS[pwm_ch].type == OutTypePwm) {
         if (velocity == 0) {
             ledcWrite(pin, PWM_ZERO_OFFSET);
         } else {
