@@ -67,6 +67,11 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     for(size_t i = 0; i < OutChannelCount; i++) {
         last_out[i] = 0;
     }
+
+    // Initialize pitchbend to center (0 = no bend)
+    for(size_t i = 0; i < MIDI_CHANNEL_COUNT; i++) {
+        pitchbend[i] = 0;
+    }
 }
 
 void MidiProcessor::begin(void) {
@@ -91,14 +96,19 @@ void MidiProcessor::midi_task(void* parameter) {
     }
 }
 
-void MidiProcessor::out_pitch(int ch, int note)
+void MidiProcessor::out_pitch(int ch, int note, int pitchbend_value)
 {
     if(ch >= OutChannelCount) return;
     if(ch < 0) return;
 
-    if(DEBUG_MIDI_PROCESSOR) Serial.printf("out_pitch: %d, %d\n", ch, note);
+    // Calculate pitchbend offset in semitones
+    // pitchbend_value: -8192 to +8192, 0 = center (no bend)
+    float bend_semitones = (float)pitchbend_value / 8192.0f * PITCHBEND_RANGE_SEMITONES;
+    float bent_note = note + bend_semitones;
 
-    int v = (note - MIDDLE_NOTE) * PWM_NOTE_SCALE + PWM_ZERO_OFFSET;
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("out_pitch: %d, %d (bend: %.2f)\n", ch, note, bend_semitones);
+
+    int v = (bent_note - MIDDLE_NOTE) * PWM_NOTE_SCALE + PWM_ZERO_OFFSET;
     if (v > int(PWM_MAX_VAL))
         return;
 
@@ -170,7 +180,7 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
             out_gate(i, velocity);
             last_out[i] = velocity;
         } else if (type == MidiOutType::MidiOutPitch) {
-            out_pitch(i, note);
+            out_pitch(i, note, pitchbend[channel]);
             last_out[i] = note;
         } else if (type == MidiOutType::MidiOutVelocity) {
             out_7bit_value(i, velocity);
@@ -204,10 +214,9 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
         }
 
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
-
-            // keep last note CV after note off
+            // keep last note CV after note off, with pitchbend applied
             if (current_note != NoteHistory::NO_NOTE) {
-                out_pitch(i, current_note);
+                out_pitch(i, current_note, pitchbend[channel]);
                 last_out[i] = current_note;
             }
         }
@@ -236,13 +245,26 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     }
 }
 
-void MidiProcessor::handle_pitchbend(uint8_t channel, uint16_t value) {
+void MidiProcessor::handle_pitchbend(uint8_t channel, int value) {
+    if(DEBUG_MIDI_PROCESSOR) Serial.printf("handle_pitchbend: %d, %d\n", channel, value);
+
+    // Store raw pitchbend value
+    pitchbend[channel] = value;
+
+    // For all outputs with MidiOutPitch type, update pitch with pitchbend applied
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
         
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
-            // TODO: implement
-            last_out[i] = value;
+        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+            // Get current note from note history
+            uint8_t current_note = note_history[channel].get_current();
+            if (current_note != NoteHistory::NO_NOTE) {
+                out_pitch(i, current_note, value);
+            }
+        } else if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
+            // Direct pitchbend output (for compatibility)
+            out_7bit_value(i, value >> 7); // Use upper 7 bits
+            last_out[i] = value >> 7;
         }
     }
 }

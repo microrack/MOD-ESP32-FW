@@ -14,7 +14,7 @@ public:
     void handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity);
     void handle_cc(uint8_t channel, uint8_t cc, uint8_t value);
     void handle_aftertouch(uint8_t channel, uint8_t value);
-    void handle_pitchbend(uint8_t channel, uint16_t value);
+    void handle_pitchbend(uint8_t channel, int value);
     void handle_clock(void);
     void handle_start(void);
     void handle_stop(void);
@@ -25,13 +25,15 @@ private:
     static constexpr float PWM_NOTE_SCALE = (1 << PWM_RESOLUTION) / (12 * 10.99); // 10.99 Vpp, 12 notes per octave (1 V/oct)
     static const int PWM_ZERO_OFFSET = 498; // 0 V at MIDDLE_NOTE
     static const int MIDDLE_NOTE = 60; // C4 (middle C)
+    static constexpr float PITCHBEND_RANGE_SEMITONES = 2.0f; // Standard MIDI pitchbend range in semitones
 
     MidiSettingsState* state;
     NoteHistory note_history[MIDI_CHANNEL_COUNT];
     TaskHandle_t midi_task_handle;
+    int pitchbend[MIDI_CHANNEL_COUNT]; // Raw pitchbend value per channel
 
     void out_gate(int pwm_ch, int velocity);
-    void out_pitch(int pwm_ch, int note);
+    void out_pitch(int pwm_ch, int note, int pitchbend_value = 0);
     void out_7bit_value(int pwm_ch, int value);
     static void midi_task(void* parameter);
 
