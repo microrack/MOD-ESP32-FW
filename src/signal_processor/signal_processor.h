@@ -14,6 +14,50 @@
 #define MOZZI_AUDIO_PIN_2 OUT_CHANNEL_B_PIN
 #define MOZZI_ANALOG_READ MOZZI_ANALOG_READ_NONE
 
+// Forward declaration for AudioOutput (defined in AudioOutput.h)
+struct StereoOutput;
+typedef StereoOutput AudioOutput;
+
+enum ProcessorEventType {
+    EventControl,
+    EventClock,
+    EventStart,
+    EventStop,
+    EventNoteOn,
+    EventNoteOff,
+    EventCc,
+    EventAftertouch,
+    EventPitchBend
+};
+
+union ProcessorEvent {
+    struct {
+        // Empty struct for events without arguments
+    } empty;
+    
+    struct {
+        uint8_t channel; // 0 or 1 (from OUT_CHANNELS[].pin)
+        uint8_t note;
+        uint8_t velocity;
+    } note;
+    
+    struct {
+        uint8_t channel; // 0 or 1 (from OUT_CHANNELS[].pin)
+        uint8_t cc;
+        uint8_t value;
+    } cc;
+    
+    struct {
+        uint8_t channel; // 0 or 1 (from OUT_CHANNELS[].pin)
+        uint8_t value;
+    } aftertouch;
+    
+    struct {
+        uint8_t channel; // 0 or 1 (from OUT_CHANNELS[].pin)
+        int value;
+    } pitchbend;
+};
+
 class SignalProcessor {
 public:
     SignalProcessor(MidiSettingsState* state);
@@ -36,6 +80,22 @@ public:
     
     bool osc_enabled[2]; // MOZZI_AUDIO_CHANNELS
     int mozzi_out[2]; // MOZZI_AUDIO_CHANNELS
+    
+    // Callback function types
+    typedef AudioOutput (*UpdateAudioCallback)(void);
+    typedef void (*EventCallback)(ProcessorEventType, ProcessorEvent);
+    
+    // Callback setters
+    void set_update_audio_callback(UpdateAudioCallback callback) {
+        update_audio_callback = callback;
+    }
+    
+    void set_event_callback(EventCallback callback) {
+        event_callback = callback;
+    }
+
+    UpdateAudioCallback update_audio_callback;
+    EventCallback event_callback;
 
 private:
     static constexpr float PWM_NOTE_SCALE = (1 << PWM_RESOLUTION) / (12 * 10.99); // 10.99 Vpp, 12 notes per octave (1 V/oct)

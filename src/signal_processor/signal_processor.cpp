@@ -96,6 +96,10 @@ SignalProcessor::SignalProcessor(MidiSettingsState* state)
         osc_enabled[i] = false;
         mozzi_out[i] = 0;
     }
+    
+    // Initialize callbacks
+    update_audio_callback = nullptr;
+    event_callback = nullptr;
 }
 
 void SignalProcessor::begin(void) {
@@ -127,22 +131,34 @@ void updateControl() {
                 }
             }
         }
+        
+        // Call EventControl callback
+        if (signal_processor->event_callback != nullptr) {
+            ProcessorEvent event = {};
+            signal_processor->event_callback(EventControl, event);
+        }
     }
 }
 
 AudioOutput updateAudio() {
     if (signal_processor == nullptr) {
-        int8_t osc = aSin1.next();
-        return StereoOutput::from8Bit(osc, osc);
+        return StereoOutput::from8Bit(0, 0);
     }
     
     AudioOutputStorage_t left_val, right_val;
 
-    int8_t osc = aSin1.next();
-    
+    // int8_t osc = aSin1.next();
+
+    AudioOutput cb_output = StereoOutput::from8Bit(0, 0);
+    // Call update_audio callback if any channel has osc enabled
+    if (signal_processor->update_audio_callback != nullptr && 
+        (signal_processor->osc_enabled[0] || signal_processor->osc_enabled[1])) {
+        AudioOutput cb_output = signal_processor->update_audio_callback();
+    }
+
     // Left channel (index 0)
     if (signal_processor->osc_enabled[0]) {
-        left_val = MonoOutput::from8Bit(osc);
+        left_val = cb_output.l();
     } else {
         // mozzi_out contains zero-centered values, use directly
         left_val = signal_processor->mozzi_out[0];
@@ -150,7 +166,7 @@ AudioOutput updateAudio() {
     
     // Right channel (index 1)
     if (signal_processor->osc_enabled[1]) {
-        right_val = MonoOutput::from8Bit(osc);
+        right_val = cb_output.r();
     } else {
         // mozzi_out contains zero-centered values, use directly
         right_val = signal_processor->mozzi_out[1];
@@ -197,6 +213,12 @@ void SignalProcessor::clock_routine(void) {
                 if (current_time - internal_clock_last_tick_time >= tick_interval_ms) {
                     internal_clock_last_tick_time = current_time;
                     clock_tick_count++;
+                    
+                    // Call EventClock callback for internal clock
+                    if (event_callback != nullptr) {
+                        ProcessorEvent event = {};
+                        event_callback(EventClock, event);
+                    }
                     
                     // Reset clock_tick_count every CLOCK_TICKS_PER_BEAT ticks (one beat)
                     if (clock_tick_count >= CLOCK_TICKS_PER_BEAT) {
@@ -353,6 +375,18 @@ void SignalProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velo
             out_7bit_value(i, velocity);
             last_out[i] = velocity;
         }
+        
+        // Call EventNoteOn callback for OutTypeMozzi channels
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+            int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
+            if (mozzi_ch >= 0 && mozzi_ch < 2) {
+                ProcessorEvent event = {};
+                event.note.channel = mozzi_ch;
+                event.note.note = note;
+                event.note.velocity = velocity;
+                event_callback(EventNoteOn, event);
+            }
+        }
     }
 }
 
@@ -387,6 +421,18 @@ void SignalProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t vel
                 last_out[i] = current_note;
             }
         }
+        
+        // Call EventNoteOff callback for OutTypeMozzi channels
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+            int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
+            if (mozzi_ch >= 0 && mozzi_ch < 2) {
+                ProcessorEvent event = {};
+                event.note.channel = mozzi_ch;
+                event.note.note = note;
+                event.note.velocity = velocity;
+                event_callback(EventNoteOff, event);
+            }
+        }
     }
 }
 
@@ -401,6 +447,18 @@ void SignalProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
             out_7bit_value(i, value);
             last_out[i] = value;
         }
+        
+        // Call EventCc callback for OutTypeMozzi channels
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+            int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
+            if (mozzi_ch >= 0 && mozzi_ch < 2) {
+                ProcessorEvent event = {};
+                event.cc.channel = mozzi_ch;
+                event.cc.cc = cc;
+                event.cc.value = value;
+                event_callback(EventCc, event);
+            }
+        }
     }
 }
 
@@ -411,6 +469,17 @@ void SignalProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
             out_7bit_value(i, value);
             last_out[i] = value;
+        }
+        
+        // Call EventAftertouch callback for OutTypeMozzi channels
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+            int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
+            if (mozzi_ch >= 0 && mozzi_ch < 2) {
+                ProcessorEvent event = {};
+                event.aftertouch.channel = mozzi_ch;
+                event.aftertouch.value = value;
+                event_callback(EventAftertouch, event);
+            }
         }
     }
 }
@@ -435,6 +504,17 @@ void SignalProcessor::handle_pitchbend(uint8_t channel, int value) {
             // Direct pitchbend output (for compatibility)
             out_7bit_value(i, value >> 7); // Use upper 7 bits
             last_out[i] = value >> 7;
+        }
+        
+        // Call EventPitchBend callback for OutTypeMozzi channels
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+            int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
+            if (mozzi_ch >= 0 && mozzi_ch < 2) {
+                ProcessorEvent event = {};
+                event.pitchbend.channel = mozzi_ch;
+                event.pitchbend.value = value;
+                event_callback(EventPitchBend, event);
+            }
         }
     }
 }
@@ -474,6 +554,12 @@ void SignalProcessor::handle_clock(void) {
     }
     
     clock_last_time = current_time;
+    
+    // Call EventClock callback
+    if (event_callback != nullptr) {
+        ProcessorEvent event = {};
+        event_callback(EventClock, event);
+    }
 }
 
 void SignalProcessor::handle_start(void) {
@@ -506,6 +592,12 @@ void SignalProcessor::handle_start(void) {
             last_out[i] = 0;
         }
     }
+    
+    // Call EventStart callback
+    if (event_callback != nullptr) {
+        ProcessorEvent event = {};
+        event_callback(EventStart, event);
+    }
 }
 
 void SignalProcessor::handle_stop(void) {
@@ -516,12 +608,18 @@ void SignalProcessor::handle_stop(void) {
             last_out[i] = 255;
         }
     }
-    
+
     // Handle MidiOutRun outputs
     for (size_t i = 0; i < OutChannelCount; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutRun) {
             out_gate(i, 0);
             last_out[i] = 0;
         }
+    }
+    
+    // Call EventStop callback
+    if (event_callback != nullptr) {
+        ProcessorEvent event = {};
+        event_callback(EventStop, event);
     }
 }
