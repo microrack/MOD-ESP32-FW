@@ -31,8 +31,8 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          .pio/build/esp32dev/firmware.bin
-          .pio/build/esp32dev/firmware.elf
+          .pio/build/modesp32v1/firmware.bin
+          .pio/build/modesp32v1/firmware.elf
         generate_release_notes: true
         draft: false
         prerelease: false
@@ -41,7 +41,7 @@ jobs:
         
     - name: Copy firmware to web directory
       run: |
-        cp .pio/build/esp32dev/firmware.bin web/firmware.bin
+        cp .pio/build/modesp32v1/firmware.bin web/firmware.bin
         sed -i "s/Version: <span id=\"firmwareVersion\">.*<\/span>/Version: <span id=\"firmwareVersion\">${{ github.ref_name }}<\/span>/" web/index.html
         
     - name: Deploy to GitHub Pages
