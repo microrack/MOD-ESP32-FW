@@ -34,7 +34,12 @@ enum MidiChannel {
 const int MIDI_CHANNEL_COUNT = 16 + 1; // start from 1 to 16
 
 enum MidiOutType {
-    MidiOutClock,
+    MidiOutClock1_4,
+    MidiOutClock1_8,
+    MidiOutClock1_16,
+    MidiOutClock1_32,
+    MidiOutClock1_8T,
+    MidiOutClock1_16T,
     MidiOutGate,
     MidiOutPitch,
     MidiOutVelocity,
@@ -175,7 +180,7 @@ public:
     const static int MAX_BPM = 255;
     const static int MIN_BPM = 1;
     const static int MAX_MIDI_OUT_TYPE = MidiOutCc127;
-    const static int MIN_MIDI_OUT_TYPE = MidiOutGate;
+    const static int MIN_MIDI_OUT_TYPE = MidiOutClock1_4;
     const static int MAX_MIDI_CLK_TYPE = MidiClkExt;
     const static int MIN_MIDI_CLK_TYPE = MidiClkInt;
 
@@ -215,7 +220,8 @@ public:
     int get_max_midi_clk_type(void) { return MAX_MIDI_CLK_TYPE; }
     int get_min_midi_clk_type(void) { return MIN_MIDI_CLK_TYPE; }
 
-    
+    bool is_clock_type(MidiOutType type);
+    int get_clock_division_ticks(MidiOutType type);
     
 private:
     int bpm;

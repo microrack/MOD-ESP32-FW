@@ -78,7 +78,6 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     clock_last_time = 0;
     clock_tick_count = 0;
     clock_measurement_start = 0;
-    clock_gate_start = 0;
 }
 
 void MidiProcessor::begin(void) {
@@ -105,18 +104,30 @@ void MidiProcessor::midi_task(void* parameter) {
 }
 
 void MidiProcessor::clock_routine(void) {
-    unsigned long current_time = millis();
-    
-    // Check if CLOCK_DURATION has passed since clock_gate_start
-    if (clock_gate_start > 0 && (current_time - clock_gate_start) >= CLOCK_DURATION) {
-        // Set gate to 0 for all outputs with MidiOutClock type
-        for (int i = 0; i < OutChannelCount; i++) {
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutClock) {
-                out_gate(i, 0);
-                last_out[i] = 0;
+    // Update all clock outputs based on current clock_tick_count
+    for (int i = 0; i < OutChannelCount; i++) {
+        MidiOutType type = state->get_midi_out_type(i);
+        if (state->is_clock_type(type)) {
+            int division_ticks = state->get_clock_division_ticks(type);
+            if (division_ticks > 0) {
+                // Calculate pulse duration: half of period, but not more than MAX_CLOCK_TICK_DURATION
+                int pulse_duration = division_ticks / 2;
+                if (pulse_duration > MAX_CLOCK_TICK_DURATION) {
+                    pulse_duration = MAX_CLOCK_TICK_DURATION;
+                }
+                
+                // Check if gate should be high based on current clock_tick_count
+                int phase = clock_tick_count % division_ticks;
+                bool should_be_high = phase < pulse_duration;
+                
+                // Update gate state if needed
+                uint8_t target_value = should_be_high ? 255 : 0;
+                if (last_out[i] != target_value) {
+                    out_gate(i, target_value);
+                    last_out[i] = target_value;
+                }
             }
         }
-        clock_gate_start = 0; // Reset to prevent repeated calls
     }
 }
 
@@ -308,18 +319,10 @@ void MidiProcessor::handle_clock(void) {
     }
     
     clock_tick_count++;
-    
+
     // Calculate BPM every CLOCK_TICKS_PER_BEAT ticks (one beat)
     if (clock_tick_count >= CLOCK_TICKS_PER_BEAT) {
         unsigned long elapsed_ms = current_time - clock_measurement_start;
-
-        for (int i = 0; i < OutChannelCount; i++) {
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutClock) {
-               out_gate(i, 255);
-               last_out[i] = 255;
-            }
-        }
-        clock_gate_start = current_time;
         
         if (elapsed_ms > 0) {
             // BPM = (60 seconds * 1000 ms/sec) / (elapsed_ms ms for one beat)
@@ -346,6 +349,14 @@ void MidiProcessor::handle_start(void) {
     if (state->get_midi_clk_type() == MidiClkType::MidiClkExt) {
         clock_measurement_start = 0;
         clock_tick_count = 0;
+        
+        // Lower all clock outputs
+        for (size_t i = 0; i < OutChannelCount; i++) {
+            if (state->is_clock_type(state->get_midi_out_type(i))) {
+                out_gate(i, 0);
+                last_out[i] = 0;
+            }
+        }
     }
     
     if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;

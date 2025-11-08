@@ -332,7 +332,12 @@ const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
         case MidiOutVelocity:    return "velocity";
         case MidiOutAfterTouch:  return "aftertouch";
         case MidiOutPitchBend:   return "pitchbend";
-        case MidiOutClock:       return "clock";
+        case MidiOutClock1_4:    return "clock1/4";
+        case MidiOutClock1_8:    return "clock1/8";
+        case MidiOutClock1_16:   return "clock1/16";
+        case MidiOutClock1_32:   return "clock1/32";
+        case MidiOutClock1_8T:   return "clock1/8T";
+        case MidiOutClock1_16T:  return "clock1/16T";
         default:
             if (type >= MidiOutCc0 && type <= MidiOutCc127) {
                 static char buf[8];
@@ -349,6 +354,27 @@ const char* MidiSettingsState::midi_clk_type_to_string(MidiClkType type) {
         case MidiClkInt: return "int";
         case MidiClkExt: return "ext";
         default: return "unknown";
+    }
+}
+
+bool MidiSettingsState::is_clock_type(MidiOutType type) {
+    return type == MidiOutType::MidiOutClock1_4 ||
+           type == MidiOutType::MidiOutClock1_8 ||
+           type == MidiOutType::MidiOutClock1_16 ||
+           type == MidiOutType::MidiOutClock1_32 ||
+           type == MidiOutType::MidiOutClock1_8T ||
+           type == MidiOutType::MidiOutClock1_16T;
+}
+
+int MidiSettingsState::get_clock_division_ticks(MidiOutType type) {
+    switch (type) {
+        case MidiOutType::MidiOutClock1_4:  return 24;  // Every beat (quarter note)
+        case MidiOutType::MidiOutClock1_8:  return 12;  // Every 8th note
+        case MidiOutType::MidiOutClock1_16: return 6;   // Every 16th note
+        case MidiOutType::MidiOutClock1_32: return 3;  // Every 32nd note
+        case MidiOutType::MidiOutClock1_8T: return 8;  // Every 8th note triplet (12 * 2/3)
+        case MidiOutType::MidiOutClock1_16T: return 4; // Every 16th note triplet (6 * 2/3)
+        default: return 0;
     }
 }
 
@@ -370,7 +396,7 @@ int MidiSettingsState::get_min_midi_out_type(size_t idx) {
     if (OUT_CHANNELS[idx].isPwm) {
         return MIN_MIDI_OUT_TYPE;
     } else {
-        return MidiOutClock;
+        return MidiOutClock1_4;
     }
 }
 
