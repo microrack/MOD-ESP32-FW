@@ -78,6 +78,7 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     clock_last_time = 0;
     clock_tick_count = 0;
     clock_measurement_start = 0;
+    internal_clock_last_tick_time = 0;
 }
 
 void MidiProcessor::begin(void) {
@@ -104,6 +105,36 @@ void MidiProcessor::midi_task(void* parameter) {
 }
 
 void MidiProcessor::clock_routine(void) {
+    unsigned long current_time = millis();
+    
+    // Generate internal clock ticks if MidiClkInt
+    if (state->get_midi_clk_type() == MidiClkType::MidiClkInt) {
+        int bpm = state->get_bpm();
+        if (bpm > 0) {
+            // Calculate tick interval: (60 seconds * 1000 ms) / (bpm * 24 ticks per beat)
+            unsigned long tick_interval_ms = (60 * 1000) / (bpm * CLOCK_TICKS_PER_BEAT);
+            
+            if (internal_clock_last_tick_time == 0) {
+                // Initialize on first call
+                internal_clock_last_tick_time = current_time;
+                clock_measurement_start = current_time;
+                clock_tick_count = 0;
+            } else {
+                // Check if enough time has passed for next tick
+                if (current_time - internal_clock_last_tick_time >= tick_interval_ms) {
+                    internal_clock_last_tick_time = current_time;
+                    clock_tick_count++;
+                    
+                    // Reset clock_tick_count every CLOCK_TICKS_PER_BEAT ticks (one beat)
+                    if (clock_tick_count >= CLOCK_TICKS_PER_BEAT) {
+                        clock_tick_count = 0;
+                        clock_measurement_start = current_time;
+                    }
+                }
+            }
+        }
+    }
+    
     // Update all clock outputs based on current clock_tick_count
     for (int i = 0; i < OutChannelCount; i++) {
         MidiOutType type = state->get_midi_out_type(i);

@@ -39,6 +39,7 @@ private:
     unsigned long clock_last_time;
     int clock_tick_count;
     unsigned long clock_measurement_start;
+    unsigned long internal_clock_last_tick_time; // Time of last internal clock tick
 
     void clock_routine(void);
     void out_gate(int pwm_ch, int velocity);
