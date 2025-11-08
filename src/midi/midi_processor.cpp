@@ -73,6 +73,11 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
         pitchbend[i] = 0;
         last_cc[i] = 0;
     }
+
+    // Initialize clock measurement
+    clock_last_time = 0;
+    clock_tick_count = 0;
+    clock_measurement_start = 0;
 }
 
 void MidiProcessor::begin(void) {
@@ -275,11 +280,49 @@ void MidiProcessor::handle_pitchbend(uint8_t channel, int value) {
 
 void MidiProcessor::handle_clock(void) {
     if (state->get_midi_clk_type() != MidiClkType::MidiClkExt) return;
+
+    unsigned long current_time = millis();
+    
+    // Start measurement on first clock tick
+    if (clock_measurement_start == 0) {
+        clock_measurement_start = current_time;
+        clock_tick_count = 0;
+    }
+    
+    clock_tick_count++;
+    
+    // Calculate BPM every CLOCK_TICKS_PER_BEAT ticks (one beat)
+    if (clock_tick_count >= CLOCK_TICKS_PER_BEAT) {
+        unsigned long elapsed_ms = current_time - clock_measurement_start;
+        
+        if (elapsed_ms > 0) {
+            // BPM = (60 seconds * 1000 ms/sec) / (elapsed_ms ms for one beat)
+            // elapsed_ms is already the time for CLOCK_TICKS_PER_BEAT ticks (one beat)
+            int bpm = (60 * 1000) / elapsed_ms;
+            
+            // Clamp to valid range
+            if (bpm < state->get_min_bpm()) bpm = state->get_min_bpm();
+            if (bpm > state->get_max_bpm()) bpm = state->get_max_bpm();
+            
+            state->set_bpm(bpm);
+        }
+        
+        // Reset for next measurement
+        clock_measurement_start = current_time;
+        clock_tick_count = 0;
+    }
+    
+    clock_last_time = current_time;
 }
 
 void MidiProcessor::handle_start(void) {
+    // Reset clock measurement on start (for external clock)
+    if (state->get_midi_clk_type() == MidiClkType::MidiClkExt) {
+        clock_measurement_start = 0;
+        clock_tick_count = 0;
+    }
+    
     if (state->get_midi_clk_type() != MidiClkType::MidiClkInt) return;
-
 }
 
 void MidiProcessor::handle_stop(void) {

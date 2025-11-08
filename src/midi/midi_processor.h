@@ -33,6 +33,11 @@ private:
     NoteHistory note_history[MIDI_CHANNEL_COUNT];
     TaskHandle_t midi_task_handle;
     
+    // Clock frequency measurement
+    static constexpr int CLOCK_TICKS_PER_BEAT = 24; // MIDI clock sends 24 ticks per quarter note
+    unsigned long clock_last_time;
+    int clock_tick_count;
+    unsigned long clock_measurement_start;
 
     void out_gate(int pwm_ch, int velocity);
     void out_pitch(int pwm_ch, int note, int pitchbend_value = 0);
