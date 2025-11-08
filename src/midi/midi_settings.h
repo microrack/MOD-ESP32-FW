@@ -7,7 +7,7 @@
 
 class MidiSettings : public ScreenInterface {
 public:
-    MidiSettings(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
+    MidiSettings(Display* display, MidiSettingsState* state, SignalProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
     void set_screen_switcher(ScreenSwitcher* screen_switcher);
     void enter() override;
     void exit() override;
@@ -62,7 +62,7 @@ private:
     const int LINE_HEIGHT = 8;
 
     MidiSettingsState* state;
-    MidiProcessor* processor;
+    SignalProcessor* processor;
     ScreenSwitcher* screen_switcher;
     MenuItems current_item;
     bool is_editing;

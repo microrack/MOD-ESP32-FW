@@ -5,9 +5,9 @@
 #include "midi_settings_state.h"
 #include "note_history.h"
 
-class MidiProcessor {
+class SignalProcessor {
 public:
-    MidiProcessor(MidiSettingsState* state);
+    SignalProcessor(MidiSettingsState* state);
     MidiSettingsState* state;
 
     void begin(void);

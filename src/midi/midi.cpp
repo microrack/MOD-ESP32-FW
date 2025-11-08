@@ -1,6 +1,6 @@
 #include "midi.h"
 
-MidiRoot::MidiRoot(Display* display, MidiSettingsState* state, MidiProcessor* processor)
+MidiRoot::MidiRoot(Display* display, MidiSettingsState* state, SignalProcessor* processor)
     : ScreenInterface(display),
       midi_info(display, state, processor, nullptr),
       midi_settings(display, state, processor, nullptr),

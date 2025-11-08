@@ -22,11 +22,11 @@ Input input_handler;
 
 // Create MIDI settings state and processor
 MidiSettingsState midi_settings_state;
-MidiProcessor midi_processor(&midi_settings_state);
+SignalProcessor signal_processor(&midi_settings_state);
 
 // Create screen objects
 OscilloscopeRoot oscilloscope_screen(&display);
-MidiRoot midi_screen(&display, &midi_settings_state, &midi_processor);
+MidiRoot midi_screen(&display, &midi_settings_state, &signal_processor);
 
 // Create screen array and switcher
 ScreenInterface* screens[] = {&oscilloscope_screen, &midi_screen};
@@ -75,7 +75,7 @@ void setup() {
 
     // Initialize MIDI settings and processor
     midi_settings_state.begin();
-    midi_processor.begin();
+    signal_processor.begin();
 
     // Initialize MIDI screen components
     midi_screen.begin();

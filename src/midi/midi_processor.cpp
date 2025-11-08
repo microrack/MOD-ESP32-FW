@@ -23,7 +23,7 @@ Oscil <SIN2048_NUM_CELLS, AUDIO_RATE> aSin1(SIN2048_DATA);
 // MIDI interface
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
-static MidiProcessor* processor = nullptr;
+static SignalProcessor* processor = nullptr;
 
 void handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
     processor->handle_note_on(channel, note, velocity);
@@ -57,7 +57,7 @@ void handle_stop(void) {
     processor->handle_stop();
 }
 
-MidiProcessor::MidiProcessor(MidiSettingsState* state)
+SignalProcessor::SignalProcessor(MidiSettingsState* state)
     : state(state) {
 
     processor = this;
@@ -106,7 +106,7 @@ MidiProcessor::MidiProcessor(MidiSettingsState* state)
     }
 }
 
-void MidiProcessor::begin(void) {
+void SignalProcessor::begin(void) {
     // Create MIDI task on second core
     xTaskCreatePinnedToCore(
         midi_task,
@@ -119,19 +119,19 @@ void MidiProcessor::begin(void) {
     );
 }
 
-static MidiProcessor* mozzi_processor = nullptr;
+static SignalProcessor* signal_processor = nullptr;
 
 void updateControl() {
     MIDI.read();
-    if (mozzi_processor != nullptr) {
-        mozzi_processor->clock_routine();
+    if (signal_processor != nullptr) {
+        signal_processor->clock_routine();
         // Update osc_enabled based on output types
         for (size_t i = 0; i < OutChannelCount; i++) {
             if (OUT_CHANNELS[i].type == OutTypeMozzi) {
                 int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
                 if (mozzi_ch >= 0 && mozzi_ch < 2) {
-                    mozzi_processor->osc_enabled[mozzi_ch] = 
-                        (mozzi_processor->state->get_midi_out_type(i) == MidiOutType::MidiOutMozzi);
+                    signal_processor->osc_enabled[mozzi_ch] = 
+                        (signal_processor->state->get_midi_out_type(i) == MidiOutType::MidiOutMozzi);
                 }
             }
         }
@@ -139,7 +139,7 @@ void updateControl() {
 }
 
 AudioOutput updateAudio() {
-    if (mozzi_processor == nullptr) {
+    if (signal_processor == nullptr) {
         int8_t osc = aSin1.next();
         return StereoOutput::from8Bit(osc, osc);
     }
@@ -149,34 +149,34 @@ AudioOutput updateAudio() {
     int8_t osc = aSin1.next();
     
     // Left channel (index 0)
-    if (mozzi_processor->osc_enabled[0]) {
+    if (signal_processor->osc_enabled[0]) {
         left_val = MonoOutput::from8Bit(osc);
     } else {
         // mozzi_out contains zero-centered values, use directly
-        left_val = mozzi_processor->mozzi_out[0];
+        left_val = signal_processor->mozzi_out[0];
     }
     
     // Right channel (index 1)
-    if (mozzi_processor->osc_enabled[1]) {
+    if (signal_processor->osc_enabled[1]) {
         right_val = MonoOutput::from8Bit(osc);
     } else {
         // mozzi_out contains zero-centered values, use directly
-        right_val = mozzi_processor->mozzi_out[1];
+        right_val = signal_processor->mozzi_out[1];
     }
     
     return StereoOutput(left_val, right_val);
 }
 
-void MidiProcessor::midi_task(void* parameter) {
-    mozzi_processor = static_cast<MidiProcessor*>(parameter);
+void SignalProcessor::midi_task(void* parameter) {
+    signal_processor = static_cast<SignalProcessor*>(parameter);
 
     startMozzi();
     aSin1.setFreq(440);
 
     for (size_t i = 0; i < OutChannelCount; i++) {
-        if (mozzi_processor->state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
-            mozzi_processor->out_gate(i, 255);
-            mozzi_processor->last_out[i] = 255;
+        if (signal_processor->state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
+            signal_processor->out_gate(i, 255);
+            signal_processor->last_out[i] = 255;
         }
     }
     
@@ -185,7 +185,7 @@ void MidiProcessor::midi_task(void* parameter) {
     }
 }
 
-void MidiProcessor::clock_routine(void) {
+void SignalProcessor::clock_routine(void) {
     unsigned long current_time = millis();
     
     // Generate internal clock ticks if MidiClkInt
@@ -243,7 +243,7 @@ void MidiProcessor::clock_routine(void) {
     }
 }
 
-void MidiProcessor::out_pitch(int ch, int note, int pitchbend_value)
+void SignalProcessor::out_pitch(int ch, int note, int pitchbend_value)
 {
     if(ch >= OutChannelCount) return;
     if(ch < 0) return;
@@ -276,7 +276,7 @@ void MidiProcessor::out_pitch(int ch, int note, int pitchbend_value)
     }
 }
 
-void MidiProcessor::out_7bit_value(int pwm_ch, int value)
+void SignalProcessor::out_7bit_value(int pwm_ch, int value)
 {
     if(pwm_ch >= OutChannelCount) return;
     if(pwm_ch < 0) return;
@@ -302,7 +302,7 @@ void MidiProcessor::out_7bit_value(int pwm_ch, int value)
     }
 }
 
-void MidiProcessor::out_gate(int pwm_ch, int velocity)
+void SignalProcessor::out_gate(int pwm_ch, int velocity)
 {
     if(pwm_ch >= OutChannelCount) return;
     if(pwm_ch < 0) return;
@@ -334,7 +334,7 @@ void MidiProcessor::out_gate(int pwm_ch, int velocity)
     }
 }
 
-void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
+void SignalProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velocity) {
     if(DEBUG_MIDI_PROCESSOR) Serial.printf("handle_note_on: %d, %d, %d\n", channel, note, velocity);
 
     if (velocity == 0) {
@@ -364,7 +364,7 @@ void MidiProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t veloci
     }
 }
 
-void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
+void SignalProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
     if(DEBUG_MIDI_PROCESSOR) Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
 
     if (!note_history[channel].pop(note)) {
@@ -398,7 +398,7 @@ void MidiProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t veloc
     }
 }
 
-void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
+void SignalProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
     // Store last CC number for the channel
     last_cc[channel] = cc;
 
@@ -412,7 +412,7 @@ void MidiProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
     }
 }
 
-void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
+void SignalProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
         
@@ -423,7 +423,7 @@ void MidiProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     }
 }
 
-void MidiProcessor::handle_pitchbend(uint8_t channel, int value) {
+void SignalProcessor::handle_pitchbend(uint8_t channel, int value) {
     if(DEBUG_MIDI_PROCESSOR) Serial.printf("handle_pitchbend: %d, %d\n", channel, value);
 
     // Store raw pitchbend value
@@ -447,7 +447,7 @@ void MidiProcessor::handle_pitchbend(uint8_t channel, int value) {
     }
 }
 
-void MidiProcessor::handle_clock(void) {
+void SignalProcessor::handle_clock(void) {
     if (state->get_midi_clk_type() != MidiClkType::MidiClkExt) return;
 
     unsigned long current_time = millis();
@@ -484,7 +484,7 @@ void MidiProcessor::handle_clock(void) {
     clock_last_time = current_time;
 }
 
-void MidiProcessor::handle_start(void) {
+void SignalProcessor::handle_start(void) {
     // Reset clock measurement on start (for external clock)
     if (state->get_midi_clk_type() == MidiClkType::MidiClkExt) {
         clock_measurement_start = 0;
@@ -516,7 +516,7 @@ void MidiProcessor::handle_start(void) {
     }
 }
 
-void MidiProcessor::handle_stop(void) {
+void SignalProcessor::handle_stop(void) {
     // Handle MidiOutStop outputs
     for (size_t i = 0; i < OutChannelCount; i++) {
         if (state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {

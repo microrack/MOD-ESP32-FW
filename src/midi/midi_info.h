@@ -7,7 +7,7 @@
 
 class MidiInfo : public ScreenInterface {
 public:
-    MidiInfo(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
+    MidiInfo(Display* display, MidiSettingsState* state, SignalProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
     void set_screen_switcher(ScreenSwitcher* screen_switcher);
 
     void enter() override;
@@ -16,7 +16,7 @@ public:
 
 private:
     MidiSettingsState* state;
-    MidiProcessor* processor;
+    SignalProcessor* processor;
     ScreenSwitcher* screen_switcher;
     void render();
     void handle_input(Event* event);
