@@ -31,7 +31,7 @@ enum MidiChannel {
     MidiChannelAll = 17
 };
 
-const int MIDI_CHANNEL_COUNT = 16;
+const int MIDI_CHANNEL_COUNT = 16 + 1; // start from 1 to 16
 
 enum MidiOutType {
     MidiOutGate,
