@@ -3,7 +3,7 @@
 #include "../urack_types.h"
 #include "../screen_switcher.h"
 #include "midi_settings_state.h"
-#include "midi_processor.h"
+#include "../signal_processor/signal_processor.h"
 
 class MidiSettings : public ScreenInterface {
 public:

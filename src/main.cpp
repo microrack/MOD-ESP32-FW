@@ -11,7 +11,7 @@
 #include "oscilloscope/oscilloscope.h"
 #include "midi/midi.h"
 #include "midi/midi_settings_state.h"
-#include "midi/midi_processor.h"
+#include "signal_processor/signal_processor.h"
 #include "screen_switcher.h"
 
 // Create display object

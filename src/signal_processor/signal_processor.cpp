@@ -1,14 +1,6 @@
 #include <MIDI.h>
-#include "midi_processor.h"
+#include "signal_processor.h"
 
-#include <MozziConfigValues.h>
-#define MOZZI_AUDIO_MODE MOZZI_OUTPUT_PWM
-#define MOZZI_CONTROL_RATE 1024
-#define MOZZI_AUDIO_RATE PWM_FREQ
-#define MOZZI_AUDIO_CHANNELS 2
-#define MOZZI_AUDIO_PIN_1 OUT_CHANNEL_A_PIN
-#define MOZZI_AUDIO_PIN_2 OUT_CHANNEL_B_PIN
-#define MOZZI_ANALOG_READ MOZZI_ANALOG_READ_NONE
 #include <Mozzi.h>
 #include <AudioOutput.h>
 #include <Oscil.h>

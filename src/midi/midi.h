@@ -7,7 +7,7 @@
 #include "midi_info.h"
 #include "midi_settings.h"
 #include "midi_settings_state.h"
-#include "midi_processor.h"
+#include "../signal_processor/signal_processor.h"
 
 enum MidiScreen {
     MidiScreenInfo,
