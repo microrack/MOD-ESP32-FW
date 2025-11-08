@@ -18,6 +18,7 @@ public:
     void handle_clock(void);
     void handle_start(void);
     void handle_stop(void);
+    void clock_routine(void);
 
     uint8_t last_out[OutChannelCount];
     uint8_t last_cc[MIDI_CHANNEL_COUNT]; // Last CC number per channel
@@ -40,8 +41,7 @@ private:
     int clock_tick_count;
     unsigned long clock_measurement_start;
     unsigned long internal_clock_last_tick_time; // Time of last internal clock tick
-
-    void clock_routine(void);
+    
     void out_gate(int pwm_ch, int velocity);
     void out_pitch(int pwm_ch, int note, int pitchbend_value = 0);
     void out_7bit_value(int pwm_ch, int value);

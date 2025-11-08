@@ -1,6 +1,16 @@
 #include <MIDI.h>
 #include "midi_processor.h"
 
+#include <MozziConfigValues.h>
+#define MOZZI_AUDIO_MODE MOZZI_OUTPUT_INTERNAL_DAC
+#define MOZZI_CONTROL_RATE 1024
+#include <Mozzi.h>
+#include <AudioOutput.h>
+#include <Oscil.h>
+#include <tables/sin2048_int8.h>
+
+Oscil <SIN2048_NUM_CELLS, AUDIO_RATE> aSin1(SIN2048_DATA);
+
 // MIDI interface
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
@@ -94,20 +104,32 @@ void MidiProcessor::begin(void) {
     );
 }
 
+MidiProcessor* mozzi_processor = nullptr;
+
+void updateControl() {
+    MIDI.read();
+    if (mozzi_processor != nullptr) mozzi_processor->clock_routine();
+}
+
+AudioOutput updateAudio() {
+    return MonoOutput::from8Bit(aSin1.next());
+}
+
 void MidiProcessor::midi_task(void* parameter) {
-    MidiProcessor* processor = static_cast<MidiProcessor*>(parameter);
+    mozzi_processor = static_cast<MidiProcessor*>(parameter);
+
+    startMozzi();
+    aSin1.setFreq(440);
 
     for (size_t i = 0; i < OutChannelCount; i++) {
-        if (processor->state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
-            processor->out_gate(i, 255);
-            processor->last_out[i] = 255;
+        if (mozzi_processor->state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
+            mozzi_processor->out_gate(i, 255);
+            mozzi_processor->last_out[i] = 255;
         }
     }
     
     while (true) {
-        MIDI.read();
-        processor->clock_routine();
-        vTaskDelay(pdMS_TO_TICKS(2));  // 2ms delay
+        audioHook();
     }
 }
 
