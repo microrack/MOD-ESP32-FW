@@ -36,6 +36,8 @@ ScreenSwitcher screen_switcher(screens, screen_count);
 // NeoPixel setup
 Adafruit_NeoPixel pixels(1, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
+void osc_init(SignalProcessor* signal_processor);
+
 void setup() {
     pinMode(OUT_CHANNELS[OutChannelClk].pin, OUTPUT);
     pinMode(OUT_CHANNELS[OutChannelRst].pin, OUTPUT);
@@ -76,6 +78,8 @@ void setup() {
     // Initialize MIDI settings and processor
     midi_settings_state.begin();
     signal_processor.begin();
+
+    osc_init(&signal_processor);
 
     // Initialize MIDI screen components
     midi_screen.begin();

@@ -2,15 +2,11 @@
 #include "signal_processor.h"
 
 #include <Mozzi.h>
-#include <AudioOutput.h>
-#include <Oscil.h>
-#include <tables/sin2048_int8.h>
-
 #if(MOZZI_AUDIO_BITS != PWM_RESOLUTION)
 #error "MOZZI_AUDIO_BITS != PWM_RESOLUTION"
 #endif
 
-Oscil <SIN2048_NUM_CELLS, AUDIO_RATE> aSin1(SIN2048_DATA);
+#include "../osc/osc.h"
 
 // MIDI interface
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
@@ -146,14 +142,12 @@ AudioOutput updateAudio() {
     }
     
     AudioOutputStorage_t left_val, right_val;
-
-    // int8_t osc = aSin1.next();
-
     AudioOutput cb_output = StereoOutput::from8Bit(0, 0);
+
     // Call update_audio callback if any channel has osc enabled
     if (signal_processor->update_audio_callback != nullptr && 
         (signal_processor->osc_enabled[0] || signal_processor->osc_enabled[1])) {
-        AudioOutput cb_output = signal_processor->update_audio_callback();
+        cb_output = signal_processor->update_audio_callback();
     }
 
     // Left channel (index 0)
@@ -179,7 +173,6 @@ void SignalProcessor::midi_task(void* parameter) {
     signal_processor = static_cast<SignalProcessor*>(parameter);
 
     startMozzi();
-    aSin1.setFreq(440);
 
     for (size_t i = 0; i < OutChannelCount; i++) {
         if (signal_processor->state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
