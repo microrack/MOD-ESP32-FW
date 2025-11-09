@@ -39,6 +39,7 @@ union ProcessorEvent {
         uint8_t channel; // 0 or 1 (from OUT_CHANNELS[].pin)
         uint8_t note;
         uint8_t velocity;
+        uint8_t id;
     } note;
     
     struct {
@@ -97,12 +98,13 @@ public:
     UpdateAudioCallback update_audio_callback;
     EventCallback event_callback;
 
+    static constexpr float PITCHBEND_RANGE_SEMITONES = 2.0f; // Standard MIDI pitchbend range in semitones
+
 private:
     static constexpr float PWM_NOTE_SCALE = (1 << PWM_RESOLUTION) / (12 * 10.99); // 10.99 Vpp, 12 notes per octave (1 V/oct)
     static const int PWM_ZERO_OFFSET = 498; // 0 V at MIDDLE_NOTE
     static const int MIDDLE_NOTE = 60; // C4 (middle C)
-    static constexpr float PITCHBEND_RANGE_SEMITONES = 2.0f; // Standard MIDI pitchbend range in semitones
-    
+        
     NoteHistory note_history[MIDI_CHANNEL_COUNT];
     TaskHandle_t midi_task_handle;
     

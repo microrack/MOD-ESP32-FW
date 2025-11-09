@@ -24,8 +24,8 @@ struct NoteHistory
     int last;
     int count;
 
-    bool push(uint8_t note);
-    bool pop(uint8_t note);
+    bool push(uint8_t note, uint8_t* out_id);
+    bool pop(uint8_t note, uint8_t* out_id);
     bool is_in_use(uint8_t note);
     uint8_t get_prev(uint8_t note);
     uint8_t get_next(uint8_t note);

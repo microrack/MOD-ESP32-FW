@@ -349,7 +349,8 @@ void SignalProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velo
         return;
     }
 
-    if (!note_history[channel].push(note)) {
+    uint8_t note_id;
+    if (!note_history[channel].push(note, &note_id)) {
         // Note already in use. Skipping.
         return;
     }
@@ -377,6 +378,7 @@ void SignalProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velo
                 event.note.channel = mozzi_ch;
                 event.note.note = note;
                 event.note.velocity = velocity;
+                event.note.id = note_id;
                 event_callback(EventNoteOn, event);
             }
         }
@@ -386,7 +388,8 @@ void SignalProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velo
 void SignalProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t velocity) {
     if(DEBUG_MIDI_PROCESSOR) Serial.printf("handle_note_off: %d, %d, %d\n", channel, note, velocity);
 
-    if (!note_history[channel].pop(note)) {
+    uint8_t note_id;
+    if (!note_history[channel].pop(note, &note_id)) {
         // Note not in use. Skipping.
         return;
     }
@@ -425,6 +428,7 @@ void SignalProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t vel
                 event.note.channel = mozzi_ch;
                 event.note.note = note;
                 event.note.velocity = velocity;
+                event.note.id = note_id;
                 event_callback(EventNoteOff, event);
             }
         }
