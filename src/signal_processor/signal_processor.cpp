@@ -370,7 +370,7 @@ void SignalProcessor::handle_note_on(uint8_t channel, uint8_t note, uint8_t velo
         }
         
         // Call EventNoteOn callback for OutTypeMozzi channels
-        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi && type == MidiOutType::MidiOutMozzi) {
             int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
             if (mozzi_ch >= 0 && mozzi_ch < 2) {
                 ProcessorEvent event = {};
@@ -395,19 +395,21 @@ void SignalProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t vel
 
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
+
+        MidiOutType type = state->get_midi_out_type(i);
         
         if (current_note == NoteHistory::NO_NOTE) {
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutGate) {
+            if (type == MidiOutType::MidiOutGate) {
                 out_gate(i, 0);
                 last_out[i] = 0;
             }
-            if (state->get_midi_out_type(i) == MidiOutType::MidiOutVelocity) {
+            if (type == MidiOutType::MidiOutVelocity) {
                 out_7bit_value(i, 0);
                 last_out[i] = 0;
             }
         }
 
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+        if (type == MidiOutType::MidiOutPitch) {
             // keep last note CV after note off, with pitchbend applied
             if (current_note != NoteHistory::NO_NOTE) {
                 out_pitch(i, current_note, pitchbend[channel]);
@@ -416,7 +418,7 @@ void SignalProcessor::handle_note_off(uint8_t channel, uint8_t note, uint8_t vel
         }
         
         // Call EventNoteOff callback for OutTypeMozzi channels
-        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi && type == MidiOutType::MidiOutMozzi) {
             int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
             if (mozzi_ch >= 0 && mozzi_ch < 2) {
                 ProcessorEvent event = {};
@@ -435,14 +437,16 @@ void SignalProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
 
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
+
+        MidiOutType type = state->get_midi_out_type(i);
         
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutCc0 + cc) {
+        if (type == MidiOutType::MidiOutCc0 + cc) {
             out_7bit_value(i, value);
             last_out[i] = value;
         }
         
         // Call EventCc callback for OutTypeMozzi channels
-        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi && type == MidiOutType::MidiOutMozzi) {
             int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
             if (mozzi_ch >= 0 && mozzi_ch < 2) {
                 ProcessorEvent event = {};
@@ -458,14 +462,16 @@ void SignalProcessor::handle_cc(uint8_t channel, uint8_t cc, uint8_t value) {
 void SignalProcessor::handle_aftertouch(uint8_t channel, uint8_t value) {
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
+
+        MidiOutType type = state->get_midi_out_type(i);
         
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutAfterTouch) {
+        if (type == MidiOutType::MidiOutAfterTouch) {
             out_7bit_value(i, value);
             last_out[i] = value;
         }
         
         // Call EventAftertouch callback for OutTypeMozzi channels
-        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi && type == MidiOutType::MidiOutMozzi) {
             int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
             if (mozzi_ch >= 0 && mozzi_ch < 2) {
                 ProcessorEvent event = {};
@@ -486,21 +492,23 @@ void SignalProcessor::handle_pitchbend(uint8_t channel, int value) {
     // For all outputs with MidiOutPitch type, update pitch with pitchbend applied
     for (int i = 0; i < OutChannelCount; i++) {
         if (!is_out_channel_match(i, channel)) continue;
+
+        MidiOutType type = state->get_midi_out_type(i);
         
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitch) {
+        if (type == MidiOutType::MidiOutPitch) {
             // Get current note from note history
             uint8_t current_note = note_history[channel].get_current();
             if (current_note != NoteHistory::NO_NOTE) {
                 out_pitch(i, current_note, value);
             }
-        } else if (state->get_midi_out_type(i) == MidiOutType::MidiOutPitchBend) {
+        } else if (type == MidiOutType::MidiOutPitchBend) {
             // Direct pitchbend output (for compatibility)
             out_7bit_value(i, value >> 7); // Use upper 7 bits
             last_out[i] = value >> 7;
         }
         
         // Call EventPitchBend callback for OutTypeMozzi channels
-        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi) {
+        if (event_callback != nullptr && OUT_CHANNELS[i].type == OutTypeMozzi && type == MidiOutType::MidiOutMozzi) {
             int mozzi_ch = OUT_CHANNELS[i].pin; // pin contains mozzi channel index (0 or 1)
             if (mozzi_ch >= 0 && mozzi_ch < 2) {
                 ProcessorEvent event = {};
@@ -563,7 +571,8 @@ void SignalProcessor::handle_start(void) {
         
         // Lower all clock outputs
         for (size_t i = 0; i < OutChannelCount; i++) {
-            if (state->is_clock_type(state->get_midi_out_type(i))) {
+            MidiOutType type = state->get_midi_out_type(i);
+            if (state->is_clock_type(type)) {
                 out_gate(i, 0);
                 last_out[i] = 0;
             }
@@ -572,7 +581,8 @@ void SignalProcessor::handle_start(void) {
 
     // Handle MidiOutRun outputs
     for (size_t i = 0; i < OutChannelCount; i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutRun) {
+        MidiOutType type = state->get_midi_out_type(i);
+        if (type == MidiOutType::MidiOutRun) {
             out_gate(i, 255);
             last_out[i] = 255;
         }
@@ -580,7 +590,8 @@ void SignalProcessor::handle_start(void) {
 
     // Handle MidiOutStop outputs
     for (size_t i = 0; i < OutChannelCount; i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
+        MidiOutType type = state->get_midi_out_type(i);
+        if (type == MidiOutType::MidiOutStop) {
             out_gate(i, 0);
             last_out[i] = 0;
         }
@@ -596,7 +607,8 @@ void SignalProcessor::handle_start(void) {
 void SignalProcessor::handle_stop(void) {
     // Handle MidiOutStop outputs
     for (size_t i = 0; i < OutChannelCount; i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutStop) {
+        MidiOutType type = state->get_midi_out_type(i);
+        if (type == MidiOutType::MidiOutStop) {
             out_gate(i, 255);
             last_out[i] = 255;
         }
@@ -604,7 +616,8 @@ void SignalProcessor::handle_stop(void) {
 
     // Handle MidiOutRun outputs
     for (size_t i = 0; i < OutChannelCount; i++) {
-        if (state->get_midi_out_type(i) == MidiOutType::MidiOutRun) {
+        MidiOutType type = state->get_midi_out_type(i);
+        if (type == MidiOutType::MidiOutRun) {
             out_gate(i, 0);
             last_out[i] = 0;
         }
