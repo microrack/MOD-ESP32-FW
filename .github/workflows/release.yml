@@ -27,12 +27,17 @@ jobs:
       run: |
         pio run
         
+    - name: Create release package
+      run: |
+        python3 scripts/build_release.py
+        
     - name: Create release
       uses: softprops/action-gh-release@v1
       with:
         files: |
           .pio/build/modesp32v1/firmware.bin
           .pio/build/modesp32v1/firmware.elf
+          .pio/build/modesp32v1/firmware_release.zip
         generate_release_notes: true
         draft: false
         prerelease: false
