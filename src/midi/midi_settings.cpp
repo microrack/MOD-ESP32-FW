@@ -2,7 +2,7 @@
 #include "midi_settings.h"
 #include "util.h"
 
-MidiSettings::MidiSettings(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher)
+MidiSettings::MidiSettings(Display* display, MidiSettingsState* state, SignalProcessor* processor, ScreenSwitcher* screen_switcher)
     : ScreenInterface(display), state(state), processor(processor), screen_switcher(screen_switcher),
       current_item(MENU_CHANNEL), is_editing(false), row_number(0) {}
 

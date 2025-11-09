@@ -2,7 +2,7 @@
 #include "midi_info.h"
 #include "util.h"
 
-MidiInfo::MidiInfo(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher)
+MidiInfo::MidiInfo(Display* display, MidiSettingsState* state, SignalProcessor* processor, ScreenSwitcher* screen_switcher)
     : ScreenInterface(display), state(state), processor(processor), screen_switcher(screen_switcher) {
     // Initialize any specific properties
 }

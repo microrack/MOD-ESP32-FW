@@ -11,7 +11,7 @@
 #include "oscilloscope/oscilloscope.h"
 #include "midi/midi.h"
 #include "midi/midi_settings_state.h"
-#include "midi/midi_processor.h"
+#include "signal_processor/signal_processor.h"
 #include "screen_switcher.h"
 
 // Create display object
@@ -22,11 +22,11 @@ Input input_handler;
 
 // Create MIDI settings state and processor
 MidiSettingsState midi_settings_state;
-MidiProcessor midi_processor(&midi_settings_state);
+SignalProcessor signal_processor(&midi_settings_state);
 
 // Create screen objects
 OscilloscopeRoot oscilloscope_screen(&display);
-MidiRoot midi_screen(&display, &midi_settings_state, &midi_processor);
+MidiRoot midi_screen(&display, &midi_settings_state, &signal_processor);
 
 // Create screen array and switcher
 ScreenInterface* screens[] = {&oscilloscope_screen, &midi_screen};
@@ -35,6 +35,8 @@ ScreenSwitcher screen_switcher(screens, screen_count);
 
 // NeoPixel setup
 Adafruit_NeoPixel pixels(1, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
+void osc_init(SignalProcessor* signal_processor);
 
 void setup() {
     pinMode(OUT_CHANNELS[OutChannelClk].pin, OUTPUT);
@@ -75,7 +77,9 @@ void setup() {
 
     // Initialize MIDI settings and processor
     midi_settings_state.begin();
-    midi_processor.begin();
+    signal_processor.begin();
+
+    osc_init(&signal_processor);
 
     // Initialize MIDI screen components
     midi_screen.begin();

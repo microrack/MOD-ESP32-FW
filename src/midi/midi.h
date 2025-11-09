@@ -7,7 +7,7 @@
 #include "midi_info.h"
 #include "midi_settings.h"
 #include "midi_settings_state.h"
-#include "midi_processor.h"
+#include "../signal_processor/signal_processor.h"
 
 enum MidiScreen {
     MidiScreenInfo,
@@ -17,7 +17,7 @@ enum MidiScreen {
 
 class MidiRoot : public ScreenInterface {
 public:
-    MidiRoot(Display* display, MidiSettingsState* state, MidiProcessor* processor);
+    MidiRoot(Display* display, MidiSettingsState* state, SignalProcessor* processor);
     void begin(void);
     void enter() override;
     void exit() override;
@@ -29,5 +29,5 @@ private:
     ScreenInterface* midi_screens[MidiScreen::MidiScreenCount];
     ScreenSwitcher screen_switcher;
     MidiSettingsState* state;
-    MidiProcessor* processor;
+    SignalProcessor* processor;
 };

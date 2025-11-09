@@ -3,11 +3,11 @@
 #include "../urack_types.h"
 #include "../screen_switcher.h"
 #include "midi_settings_state.h"
-#include "midi_processor.h"
+#include "../signal_processor/signal_processor.h"
 
 class MidiSettings : public ScreenInterface {
 public:
-    MidiSettings(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
+    MidiSettings(Display* display, MidiSettingsState* state, SignalProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
     void set_screen_switcher(ScreenSwitcher* screen_switcher);
     void enter() override;
     void exit() override;
@@ -62,7 +62,7 @@ private:
     const int LINE_HEIGHT = 8;
 
     MidiSettingsState* state;
-    MidiProcessor* processor;
+    SignalProcessor* processor;
     ScreenSwitcher* screen_switcher;
     MenuItems current_item;
     bool is_editing;

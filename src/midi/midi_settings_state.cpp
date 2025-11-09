@@ -332,6 +332,7 @@ const char* MidiSettingsState::midi_out_type_to_string(MidiOutType type) {
         case MidiOutVelocity:    return "velocity";
         case MidiOutAfterTouch:  return "aftertouch";
         case MidiOutPitchBend:   return "pitchbend";
+        case MidiOutMozzi:       return "mozzi";
         case MidiOutClock1_4:    return "clock1/4";
         case MidiOutClock1_8:    return "clock1/8";
         case MidiOutClock1_16:   return "clock1/16";
@@ -384,7 +385,7 @@ int MidiSettingsState::get_max_midi_out_type(size_t idx) {
     if (idx >= OutChannelCount) return 0;
     if (idx < 0) return 0;
 
-    if (OUT_CHANNELS[idx].isPwm) {
+    if (OUT_CHANNELS[idx].type == OutTypeMozzi || OUT_CHANNELS[idx].type == OutTypePwm) {
         return MAX_MIDI_OUT_TYPE;
     } else {
         return MidiOutGate;
@@ -395,7 +396,7 @@ int MidiSettingsState::get_min_midi_out_type(size_t idx) {
     if (idx >= OutChannelCount) return 0;
     if (idx < 0) return 0;
 
-    if (OUT_CHANNELS[idx].isPwm) {
+    if (OUT_CHANNELS[idx].type == OutTypeMozzi || OUT_CHANNELS[idx].type == OutTypePwm) {
         return MIN_MIDI_OUT_TYPE;
     } else {
         return MidiOutClock1_4;

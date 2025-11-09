@@ -3,11 +3,11 @@
 #include "../urack_types.h"
 #include "../screen_switcher.h"
 #include "midi_settings_state.h"
-#include "midi_processor.h"
+#include "../signal_processor/signal_processor.h"
 
 class MidiInfo : public ScreenInterface {
 public:
-    MidiInfo(Display* display, MidiSettingsState* state, MidiProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
+    MidiInfo(Display* display, MidiSettingsState* state, SignalProcessor* processor, ScreenSwitcher* screen_switcher = nullptr);
     void set_screen_switcher(ScreenSwitcher* screen_switcher);
 
     void enter() override;
@@ -16,7 +16,7 @@ public:
 
 private:
     MidiSettingsState* state;
-    MidiProcessor* processor;
+    SignalProcessor* processor;
     ScreenSwitcher* screen_switcher;
     void render();
     void handle_input(Event* event);
