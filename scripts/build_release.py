@@ -108,42 +108,81 @@ def create_combined_binary(prebuilt_dir, firmware_bin_path, output_path):
     }
 
 def create_addresses_file(partitions, binary_addrs, output_path):
-    """Creates a text file with addresses for flashing"""
-    with open(output_path, 'w') as f:
-        f.write("# ESP32 firmware flash addresses\n")
-        f.write("# Format: filename, flash address (hex), flash address (dec)\n\n")
-        
-        f.write("# ============================================\n")
-        f.write("# FIRMWARE FLASHING INSTRUCTIONS\n")
-        f.write("# ============================================\n\n")
-        
-        f.write("combined_firmware.bin -> flash from address 0x00000000 (flash memory start)\n")
-        f.write("# This file contains all firmware components:\n")
-        if binary_addrs['boot_app0'] is not None:
-            f.write(f"#   - boot_app0.bin at address 0x{binary_addrs['boot_app0']:08X}\n")
-        f.write(f"#   - bootloader.bin at address 0x{binary_addrs['bootloader']:08X}\n")
-        f.write(f"#   - partitions.bin at address 0x{binary_addrs['partitions']:08X}\n")
-        f.write(f"#   - firmware.bin (app0) at address 0x{binary_addrs['app0']:08X}\n\n")
-        
-        f.write("# NVS partition:\n")
-        nvs_addr = partitions.get('nvs', 0x9000)
-        f.write(f"nvs.csv -> write to nvs partition (address: 0x{nvs_addr:08X}, {nvs_addr})\n")
-        f.write("# Note: nvs.csv must be compiled to nvs.bin first using nvs_partition_gen.py\n\n")
-        
-        f.write("# ============================================\n")
-        f.write("# DETAILED PARTITION INFORMATION\n")
-        f.write("# ============================================\n\n")
-        
-        f.write("# Component addresses in combined_firmware.bin:\n")
-        if binary_addrs['boot_app0'] is not None:
-            f.write(f"boot_app0.bin, 0x{binary_addrs['boot_app0']:08X}, {binary_addrs['boot_app0']}\n")
-        f.write(f"bootloader.bin, 0x{binary_addrs['bootloader']:08X}, {binary_addrs['bootloader']}\n")
-        f.write(f"partitions.bin, 0x{binary_addrs['partitions']:08X}, {binary_addrs['partitions']}\n")
-        f.write(f"firmware.bin (app0), 0x{binary_addrs['app0']:08X}, {binary_addrs['app0']}\n\n")
-        
-        f.write("# Partitions from default.csv:\n")
-        for name, addr in sorted(partitions.items()):
-            f.write(f"{name}, 0x{addr:08X}, {addr}\n")
+    """Creates a machine-readable CSV file with addresses for flashing"""
+    writer = csv.writer(output_path)
+    
+    # Write header
+    writer.writerow(['type', 'name', 'filename', 'address_hex', 'address_dec', 'description'])
+    
+    # Write combined firmware entry
+    writer.writerow([
+        'firmware',
+        'combined_firmware',
+        'combined_firmware.bin',
+        '0x00000000',
+        '0',
+        'Combined firmware binary - flash from address 0x00000000'
+    ])
+    
+    # Write component entries (internal addresses in combined_firmware.bin)
+    if binary_addrs['boot_app0'] is not None:
+        writer.writerow([
+            'component',
+            'boot_app0',
+            'boot_app0.bin',
+            f"0x{binary_addrs['boot_app0']:08X}",
+            str(binary_addrs['boot_app0']),
+            'Boot app0 component in combined_firmware.bin'
+        ])
+    
+    writer.writerow([
+        'component',
+        'bootloader',
+        'bootloader.bin',
+        f"0x{binary_addrs['bootloader']:08X}",
+        str(binary_addrs['bootloader']),
+        'Bootloader component in combined_firmware.bin'
+    ])
+    
+    writer.writerow([
+        'component',
+        'partitions',
+        'partitions.bin',
+        f"0x{binary_addrs['partitions']:08X}",
+        str(binary_addrs['partitions']),
+        'Partitions table component in combined_firmware.bin'
+    ])
+    
+    writer.writerow([
+        'component',
+        'app0',
+        'firmware.bin',
+        f"0x{binary_addrs['app0']:08X}",
+        str(binary_addrs['app0']),
+        'Application firmware component in combined_firmware.bin'
+    ])
+    
+    # Write NVS entry
+    nvs_addr = partitions.get('nvs', 0x9000)
+    writer.writerow([
+        'data',
+        'nvs',
+        'nvs.csv',
+        f"0x{nvs_addr:08X}",
+        str(nvs_addr),
+        'NVS partition data (must be compiled to nvs.bin using nvs_partition_gen.py)'
+    ])
+    
+    # Write partition entries from default.csv
+    for name, addr in sorted(partitions.items()):
+        writer.writerow([
+            'partition',
+            name,
+            '',
+            f"0x{addr:08X}",
+            str(addr),
+            f'Partition: {name}'
+        ])
 
 def main():
     # Define paths
@@ -179,7 +218,8 @@ def main():
     
     # Create addresses file
     print(f"Creating addresses file...")
-    create_addresses_file(partitions, binary_addrs, addresses_txt)
+    with open(addresses_txt, 'w', newline='') as f:
+        create_addresses_file(partitions, binary_addrs, f)
     
     # Create archive
     print(f"Creating archive...")
