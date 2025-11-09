@@ -13,6 +13,7 @@ struct NoteHistory
         uint8_t prev;
         uint8_t next;
         bool in_use;
+        uint8_t id;
 
         void reset(void);
 

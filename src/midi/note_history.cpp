@@ -86,10 +86,19 @@ uint8_t NoteHistory::get_last(void) {
 }
 
 uint8_t NoteHistory::get_current(void) {
-    for (int i = MIDI_NOTES_COUNT - 1; i >= 0; i--) {
-        if (history[i].in_use) {
-            return i;
-        }
+    if (last == NO_NOTE) {
+        return NO_NOTE;
     }
-    return NO_NOTE;
+    
+    uint8_t max_note = last;
+    uint8_t current = history[last].prev;
+    
+    while (current != NO_NOTE) {
+        if (current > max_note) {
+            max_note = current;
+        }
+        current = history[current].prev;
+    }
+    
+    return max_note;
 }
