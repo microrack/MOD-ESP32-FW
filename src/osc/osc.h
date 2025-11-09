@@ -5,7 +5,7 @@
 const bool DEBUG_OSC = true;
 const int NUM_OSCS = 5;
 
-int pitchBend[MOZZI_AUDIO_CHANNELS];
+float pitchBend[MOZZI_AUDIO_CHANNELS];
 
 struct Osc {
     Oscil <CHEBYSHEV_5TH_256_NUM_CELLS, AUDIO_RATE> oscil;
@@ -14,7 +14,7 @@ struct Osc {
 
     Osc() : oscil(CHEBYSHEV_5TH_256_DATA), note(0), velocity(0) {}
 
-    void setFreq(int pitchBend) {
+    void setFreq(float pitchBend) {
         oscil.setFreq(
             Q16n16_to_float(Q16n16_mtof(Q8n0_to_Q16n16(note))) * pow(2.0f, pitchBend * SignalProcessor::PITCHBEND_RANGE_SEMITONES / 12.0f)
         );
@@ -58,7 +58,7 @@ void event_callback(ProcessorEventType event_type, ProcessorEvent event) {
     }
 
     if (event_type == EventPitchBend) {
-        pitchBend[event.pitchbend.channel] = event.pitchbend.value;
+        pitchBend[event.pitchbend.channel] = ((float)event.pitchbend.value - 8192.0f) / 8192.0f;  // -1.0 .. +1.0
         for(int i = 0; i < NUM_OSCS; i++) {
             oscs[event.pitchbend.channel][i].setFreq(pitchBend[event.pitchbend.channel]);
         }
