@@ -264,8 +264,7 @@ void SignalProcessor::out_pitch(int ch, int note, int pitchbend_value)
 
     // Calculate value using PWM_ZERO_OFFSET (preserves carefully tuned offset)
     int v = (bent_note - MIDDLE_NOTE) * PWM_NOTE_SCALE + PWM_ZERO_OFFSET;
-    if (v > int(PWM_MAX_VAL))
-        return;
+    if (v > int(PWM_MAX_VAL)) return;
 
     // Map channel to pin for new LEDC API
     int pin = OUT_CHANNELS[ch].pin;
