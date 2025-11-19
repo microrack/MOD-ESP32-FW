@@ -71,8 +71,10 @@ void setup() {
 
     // Initialize NeoPixel
     pixels.begin();
-    pixels.setBrightness(50);
-    pixels.setPixelColor(0, pixels.Color(0, 0, 2));
+    pixels.setBrightness(20);
+    for(size_t i = 0; i < 4; i++) {
+        pixels.setPixelColor(i, pixels.Color(2, 2, 0));
+    }
     pixels.show();
 
     // Initialize MIDI settings and processor
