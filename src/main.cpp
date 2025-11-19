@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <nvs_flash.h>
+#include <nvs.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_NeoPixel.h>
@@ -13,6 +14,7 @@
 #include "midi/midi_settings_state.h"
 #include "signal_processor/signal_processor.h"
 #include "screen_switcher.h"
+#include "testmode.h"
 
 // Create display object
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -68,6 +70,31 @@ void setup() {
 
     // Initialize input handler
     input_handler = Input();
+
+    // Check for test mode
+    nvs_handle_t nvs_handle;
+    err = nvs_open("testmode", NVS_READWRITE, &nvs_handle);
+    if (err == ESP_OK) {
+        uint8_t testmode_val = 0;
+        err = nvs_get_u8(nvs_handle, "testmode", &testmode_val);
+        Serial.printf("testmode: nvs_get_u8 err=0x%x, val=%d\n", err, testmode_val);
+        if (err == ESP_OK && testmode_val == 1) {
+            Serial.println("Entering test mode");
+            bool test_completed = test_mode(&display, &input_handler);
+            if (test_completed) {
+                // Write 0 to NVS and restart
+                nvs_set_u8(nvs_handle, "testmode", 0);
+                nvs_commit(nvs_handle);
+                nvs_close(nvs_handle);
+                ESP.restart();
+            }
+        } else {
+            Serial.printf("testmode: not entering test mode (err=0x%x, val=%d)\n", err, testmode_val);
+        }
+        nvs_close(nvs_handle);
+    } else {
+        Serial.printf("testmode: failed to open NVS namespace, err=0x%x\n", err);
+    }
 
     // Initialize NeoPixel
     pixels.begin();
