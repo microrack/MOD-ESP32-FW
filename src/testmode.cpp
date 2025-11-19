@@ -4,23 +4,19 @@
 #include "input/input.h"
 
 bool test_mode(Adafruit_SSD1306* display, Input* input) {
-    // Clear display
-    display->clearDisplay();
-    
-    // Set text properties
-    display->setTextSize(2);
-    display->setTextColor(SSD1306_WHITE);
-    display->setCursor(0, 0);
-    
-    // Display "test mode" text
-    display->println("test mode");
-    display->display();
-    
     // Array of flags for checking
     bool flags[TestFlagCount];
     for(size_t i = 0; i < TestFlagCount; i++) {
         flags[i] = false;
     }
+    
+    // Flag names
+    const char* flag_names[TestFlagCount] = {
+        "Button A",
+        "Button SW",
+        "Encoder CW",
+        "Encoder CCW"
+    };
     
     // Enter infinite loop
     for(;;) {
@@ -41,6 +37,29 @@ bool test_mode(Adafruit_SSD1306* display, Input* input) {
         } else if (event.encoder < 0) {
             flags[TestFlagEncoderCCW] = true; // Counterclockwise
         }
+        
+        // Update display
+        display->clearDisplay();
+        display->setTextSize(1);
+        display->setTextColor(SSD1306_WHITE);
+        display->setCursor(0, 0);
+        
+        // Display "test mode" header
+        display->setTextSize(2);
+        display->println("test mode");
+        display->setTextSize(1);
+        
+        // Display all flags with their status
+        for (int i = 0; i < TestFlagCount; i++) {
+            display->print(flag_names[i]);
+            if (flags[i]) {
+                display->println(" OK");
+            } else {
+                display->println("");
+            }
+        }
+        
+        display->display();
         
         // Check if all flags are set
         bool all_flags_set = true;
