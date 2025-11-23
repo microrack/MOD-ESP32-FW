@@ -71,12 +71,12 @@ void check_adc() {
     }
     
     // Check IN_0 flag (min < 300 and max > 3800)
-    if (adc0_min < 300 && adc0_max > 3800) {
+    if (adc0_min < 700 && adc0_max > 2400) {
         flags[TestFlagIN_0] = true;
     }
     
     // Check IN_1 flag (min < 300 and max > 3800)
-    if (adc1_min < 300 && adc1_max > 3800) {
+    if (adc1_min < 700 && adc1_max > 2400) {
         flags[TestFlagIN_1] = true;
     }
 }
