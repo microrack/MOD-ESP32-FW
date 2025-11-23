@@ -128,7 +128,7 @@ void display_flags(Adafruit_SSD1306* display) {
     display->display();
 }
 
-void set_dac() {
+void set_dac(SignalProcessor* signal_processor) {
     static unsigned long last_update = 0;
     static int step = 0;  // 0-5: steps (0=A max, 1=B max, 2=C max, 3=A zero, 4=B zero, 5=C zero)
     
@@ -141,22 +141,22 @@ void set_dac() {
         // Set the appropriate channel based on step
         switch (step) {
             case 0:  // A = MAX
-                ledcWrite(OUT_CHANNEL_A_PIN, PWM_MAX_VAL);
+                signal_processor->out_7bit_value(OutChannelA, 127);
                 break;
             case 1:  // B = MAX
-                ledcWrite(OUT_CHANNEL_B_PIN, PWM_MAX_VAL);
+                signal_processor->out_7bit_value(OutChannelB, 127);
                 break;
             case 2:  // C = MAX
-                ledcWrite(OUT_CHANNELS[OutChannelC].pin, PWM_MAX_VAL);
+                signal_processor->out_7bit_value(OutChannelC, 127);
                 break;
             case 3:  // A = 0
-                ledcWrite(OUT_CHANNELS[OutChannelA].pin, 0);
+                signal_processor->out_7bit_value(OutChannelA, 0);
                 break;
             case 4:  // B = 0
-                ledcWrite(OUT_CHANNELS[OutChannelB].pin, 0);
+                signal_processor->out_7bit_value(OutChannelB, 0);
                 break;
             case 5:  // C = 0
-                ledcWrite(OUT_CHANNELS[OutChannelC].pin, 0);
+                signal_processor->out_7bit_value(OutChannelC, 0);
                 break;
         }
         
@@ -165,17 +165,14 @@ void set_dac() {
     }
 }
 
-bool test_mode(Adafruit_SSD1306* display, Input* input) {
+bool test_mode(Adafruit_SSD1306* display, Input* input, SignalProcessor* signal_processor) {
     // Configure MIDI_RX_PIN as input
     pinMode(MIDI_RX_PIN, INPUT);
 
-    ledcAttach(OUT_CHANNEL_A_PIN, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttach(OUT_CHANNEL_B_PIN, PWM_FREQ, PWM_RESOLUTION);
-    ledcAttach(OUT_CHANNELS[OutChannelC].pin, PWM_FREQ, PWM_RESOLUTION);
-
-    ledcWrite(OUT_CHANNEL_A_PIN, 0);
-    ledcWrite(OUT_CHANNEL_B_PIN, 0);
-    ledcWrite(OUT_CHANNELS[OutChannelC].pin, 0);
+    
+    signal_processor->out_7bit_value(OutChannelA, 0);
+    signal_processor->out_7bit_value(OutChannelB, 0);
+    signal_processor->out_7bit_value(OutChannelC, 127);
     
     // Array of flags for checking
     
@@ -185,7 +182,7 @@ bool test_mode(Adafruit_SSD1306* display, Input* input) {
 
     // Enter infinite loop
     for(;;) {
-        set_dac();
+        set_dac(signal_processor);
 
         check_input(input);
         check_midi_rx();

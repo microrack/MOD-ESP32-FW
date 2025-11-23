@@ -75,6 +75,8 @@ public:
     void handle_stop(void);
     void clock_routine(void);
 
+    void out_7bit_value(int pwm_ch, int value);
+
     uint8_t last_out[OutChannelCount];
     uint8_t last_cc[MIDI_CHANNEL_COUNT]; // Last CC number per channel
     int pitchbend[MIDI_CHANNEL_COUNT]; // Raw pitchbend value per channel
@@ -118,7 +120,7 @@ private:
     
     void out_gate(int pwm_ch, int velocity);
     void out_pitch(int pwm_ch, int note, int pitchbend_value = 0);
-    void out_7bit_value(int pwm_ch, int value);
+    
     static void midi_task(void* parameter);
 
     inline bool is_global_channel_match(uint8_t channel) const {

@@ -71,6 +71,9 @@ void setup() {
     // Initialize input handler
     input_handler = Input();
 
+    midi_settings_state.begin();
+    signal_processor.begin();
+
     // Check for test mode
     nvs_handle_t nvs_handle;
     err = nvs_open("testmode", NVS_READWRITE, &nvs_handle);
@@ -80,7 +83,7 @@ void setup() {
         Serial.printf("testmode: nvs_get_u8 err=0x%x, val=%d\n", err, testmode_val);
         if (err == ESP_OK && testmode_val == 1) {
             Serial.println("Entering test mode");
-            bool test_completed = test_mode(&display, &input_handler);
+            bool test_completed = test_mode(&display, &input_handler, &signal_processor);
             if (test_completed) {
                 // Write 0 to NVS and restart
                 nvs_set_u8(nvs_handle, "testmode", 0);
@@ -103,10 +106,6 @@ void setup() {
         pixels.setPixelColor(i, pixels.Color(2, 2, 0));
     }
     pixels.show();
-
-    // Initialize MIDI settings and processor
-    midi_settings_state.begin();
-    signal_processor.begin();
 
     osc_init(&signal_processor);
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Adafruit_SSD1306.h>
+#include "signal_processor/signal_processor.h"
 
 class Input;
 
@@ -15,5 +16,5 @@ enum TestFlagIndex {
     TestFlagCount = 7
 };
 
-bool test_mode(Adafruit_SSD1306* display, Input* input);
+bool test_mode(Adafruit_SSD1306* display, Input* input, SignalProcessor* signal_processor);
 
