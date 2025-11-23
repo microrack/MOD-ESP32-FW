@@ -2,11 +2,11 @@ key,type,encoding,value
 midi_settings,namespace,,
 bpm,data,u32,120
 midi_channel,data,u32,17
-out_t0,data,u32,46
-out_t1,data,u32,46
-out_t2,data,u32,46
-out_t3,data,u32,46
-out_t4,data,u32,46
+out_t0,data,u32,13
+out_t1,data,u32,9
+out_t2,data,u32,8
+out_t3,data,u32,0
+out_t4,data,u32,6
 out_c0,data,u32,17
 out_c1,data,u32,17
 out_c2,data,u32,17
