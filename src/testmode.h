@@ -10,7 +10,9 @@ enum TestFlagIndex {
     TestFlagEncoderCW = 2,
     TestFlagEncoderCCW = 3,
     TestFlagMidiRx = 4,
-    TestFlagCount = 5
+    TestFlagIN_0 = 5,
+    TestFlagIN_1 = 6,
+    TestFlagCount = 7
 };
 
 bool test_mode(Adafruit_SSD1306* display, Input* input);
