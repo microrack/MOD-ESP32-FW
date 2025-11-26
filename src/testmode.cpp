@@ -12,8 +12,8 @@ const char* flag_names[TestFlagCount] = {
     "Enc CW",
     "Enc CCW",
     "MIDI RX",
-    "IN_0",
-    "IN_1"
+    "IN 0",
+    "IN 1"
 };
 
 // ADC min/max tracking for each channel
