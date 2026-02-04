@@ -84,7 +84,6 @@ private:
     const int COL2_WIDTH = COL3_X - COL2_X; // Width of column 2
     const int COL3_WIDTH = SCREEN_WIDTH - COL3_X; // Width of column 3
     const int LINE_HEIGHT = 8;
-    const int PAGINATOR_HEIGHT = 10;
 
     MidiSettingsState* state;
     SignalProcessor* processor;
@@ -94,7 +93,6 @@ private:
     int selected_row;
     int scroll_offset;
     int row_number; // current column position within row (0 = first column, 1 = second column for ChannelItem)
-    bool paginator_selected; // true when paginator is selected for navigation
 
     void render(void);
     void render_menu(void);

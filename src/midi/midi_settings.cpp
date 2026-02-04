@@ -5,7 +5,7 @@
 
 MidiSettings::MidiSettings(Display* display, MidiSettingsState* state, SignalProcessor* processor, ScreenSwitcher* screen_switcher)
         : ScreenInterface(display), state(state), processor(processor), screen_switcher(screen_switcher),
-            current_item(MENU_CHANNEL), is_editing(false), selected_row(0), scroll_offset(0), row_number(0), paginator_selected(true) {}
+            current_item(MENU_CHANNEL), is_editing(false), selected_row(0), scroll_offset(0), row_number(0) {}
 
 void MidiSettings::set_screen_switcher(ScreenSwitcher* screen_switcher) {
     this->screen_switcher = screen_switcher;
@@ -17,7 +17,6 @@ void MidiSettings::enter() {
     selected_row = 0;
     scroll_offset = 0;
     row_number = 0;
-    paginator_selected = true;
 }
 
 void MidiSettings::exit() {
@@ -37,7 +36,7 @@ void MidiSettings::render() {
 }
 
 void MidiSettings::render_menu() {
-    int visible_rows = (SCREEN_HEIGHT - PAGINATOR_HEIGHT - 2) / LINE_HEIGHT;
+    int visible_rows = SCREEN_HEIGHT / LINE_HEIGHT;
     if (visible_rows < 1) {
         visible_rows = 1;
     }
@@ -51,8 +50,8 @@ void MidiSettings::render_menu() {
             break;
         }
 
-        int y = PAGINATOR_HEIGHT + 2 + i * LINE_HEIGHT;
-        bool is_selected = (row_idx == selected_row) && !paginator_selected;
+        int y = i * LINE_HEIGHT;
+        bool is_selected = (row_idx == selected_row);
         bool is_editing_selected = is_selected && is_editing;
         const RenderRow& row = rows[row_idx];
 
@@ -170,31 +169,23 @@ void MidiSettings::handle_input(Event* event) {
         }
     } else {
         if (event->button_sw == ButtonPress) {
-            if (paginator_selected) {
-                paginator_selected = false;
-            } else {
-                const RenderRow& row = rows[selected_row];
-                if (row.type != RowBluetoothStatus) {
-                    is_editing = true;
-                    row_number = 0;
+            const RenderRow& row = rows[selected_row];
+            if (row.type != RowBluetoothStatus) {
+                is_editing = true;
+                row_number = 0;
 
-                    // cleanup last cc array when editing a MIDI output row
-                    if (row.type == RowMenu) {
-                        for(int i = 0; i < MIDI_CHANNEL_COUNT; i++) {
-                            processor->last_cc[i] = 128;
-                            processor->pitchbend[i] = 0;
-                        }
+                // cleanup last cc array when editing a MIDI output row
+                if (row.type == RowMenu) {
+                    for(int i = 0; i < MIDI_CHANNEL_COUNT; i++) {
+                        processor->last_cc[i] = 128;
+                        processor->pitchbend[i] = 0;
                     }
                 }
             }
         }
 
         if(event->button_a == ButtonPress) {
-            if (!paginator_selected) {
-                paginator_selected = true;
-            } else {
-                screen_switcher->set_screen(MidiScreen::MidiScreenInfo);
-            }
+            screen_switcher->set_screen(MidiScreen::MidiScreenInfo);
         }
     }
 
@@ -203,16 +194,13 @@ void MidiSettings::handle_input(Event* event) {
 
 void MidiSettings::handle_menu_input(Event* event) {
     if (event->encoder != 0) {
-        int visible_rows = (SCREEN_HEIGHT - PAGINATOR_HEIGHT - 2) / LINE_HEIGHT;
+        int visible_rows = SCREEN_HEIGHT / LINE_HEIGHT;
         if (visible_rows < 1) {
             visible_rows = 1;
         }
         int max_scroll = (ROW_COUNT > visible_rows) ? (ROW_COUNT - visible_rows) : 0;
 
-        if (paginator_selected && !is_editing) {
-            scroll_offset = clampi(scroll_offset + event->encoder, 0, max_scroll);
-            selected_row = clampi(selected_row, scroll_offset, scroll_offset + visible_rows - 1);
-        } else if (is_editing) {
+        if (is_editing) {
             const RenderRow& row = rows[selected_row];
             if (row.type == RowMenu) {
                 current_item = (MenuItems)row.menu_index;
@@ -316,7 +304,7 @@ void MidiSettings::handle_menu_input(Event* event) {
         current_item = (MenuItems)rows[selected_row].menu_index;
     }
 
-    if(is_editing && !paginator_selected && rows[selected_row].type == RowMenu &&
+    if(is_editing && rows[selected_row].type == RowMenu &&
        (processor->last_cc[current_item] != 0 || processor->pitchbend[current_item] != 0)) {
         const MenuItemInfo& item = items[current_item];
         int idx = item.data.output_idx;
