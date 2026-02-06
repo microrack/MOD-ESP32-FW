@@ -81,7 +81,7 @@ void setup() {
         uint8_t testmode_val = 0;
         err = nvs_get_u8(nvs_handle, "testmode", &testmode_val);
         Serial.printf("testmode: nvs_get_u8 err=0x%x, val=%d\n", err, testmode_val);
-        if (err == ESP_OK && testmode_val == 1) {
+        if (err == ESP_OK && testmode_val == 1 && false) {
             Serial.println("Entering test mode");
             bool test_completed = test_mode(&display, &input_handler, &signal_processor);
             if (test_completed) {
