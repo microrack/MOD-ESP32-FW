@@ -38,6 +38,8 @@ jobs:
           .pio/build/modesp32v1/firmware.bin
           .pio/build/modesp32v1/firmware.elf
           .pio/build/modesp32v1/firmware_release.zip
+          .pio/build/modesp32v1/combined_firmware.bin
+          .pio/build/modesp32v1/flash_addresses.txt
         generate_release_notes: true
         draft: false
         prerelease: false
