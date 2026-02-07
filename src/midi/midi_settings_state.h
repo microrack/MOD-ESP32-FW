@@ -10,6 +10,12 @@ enum MidiClkType {
     MidiClkExt,
 };
 
+enum MidiInputSource {
+    MidiInputSerial,    // Hardware serial MIDI (default)
+    MidiInputBluetooth, // BLE MIDI
+    MidiInputUsb,       // USB MIDI
+};
+
 enum MidiChannel {
     MidiChannelUnchanged   = 0,
     MidiChannel1   = 1,
@@ -212,6 +218,11 @@ public:
     MidiChannel get_midi_out_channel(size_t idx);
     MidiClkType get_midi_clk_type(void);
 
+    // Bluetooth MIDI settings
+    void set_bluetooth_enabled(bool enabled);
+    bool get_bluetooth_enabled(void);
+    const char* get_bluetooth_enabled_str(void);
+
     int get_max_bpm(void) { return MAX_BPM; }
     int get_min_bpm(void) { return MIN_BPM; }
     int get_max_midi_channel(void) { return MidiChannelAll; }
@@ -232,6 +243,7 @@ private:
     MidiOutType midi_out_type[OutChannelCount];
     MidiChannel midi_out_channel[OutChannelCount];
     MidiClkType midi_clk_type;
+    bool bluetooth_enabled;
     SemaphoreHandle_t state_mutex;
 
     const char* midi_channel_to_string(MidiChannel ch);

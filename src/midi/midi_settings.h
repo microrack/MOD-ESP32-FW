@@ -14,6 +14,12 @@ public:
     void update(Event* event) override;
 
 private:
+    enum RowType {
+        RowMenu,
+        RowBluetoothToggle,
+        RowBluetoothStatus
+    };
+
     enum MenuItems {
         MENU_CHANNEL,
         MENU_OUT_A,
@@ -39,6 +45,11 @@ private:
         } data;
     };
 
+    struct RenderRow {
+        RowType type;
+        int menu_index; // index into items when type == RowMenu
+    };
+
     static constexpr MenuItemInfo items[MENU_COUNT] = {
         {"Channel", SingleItem, {.unused = nullptr}},
         {" A", ChannelItem, {.output_idx = 0}},
@@ -47,6 +58,19 @@ private:
         {"CLK", ChannelItem, {.output_idx = 3}},
         {"RST", ChannelItem, {.output_idx = 4}},
         {"Clock", SingleItem, {.unused = nullptr}}
+    };
+
+    static constexpr int ROW_COUNT = MENU_COUNT + 2; // add bluetooth toggle + status rows
+    static constexpr RenderRow rows[ROW_COUNT] = {
+        {RowMenu, MENU_CHANNEL},
+        {RowMenu, MENU_OUT_A},
+        {RowMenu, MENU_OUT_B},
+        {RowMenu, MENU_OUT_C},
+        {RowMenu, MENU_CLOCK_OUT},
+        {RowMenu, MENU_RESET_OUT},
+        {RowMenu, MENU_CLOCK},
+        {RowBluetoothToggle, -1},
+        {RowBluetoothStatus, -1}
     };
 
     enum Direction {
@@ -66,6 +90,8 @@ private:
     ScreenSwitcher* screen_switcher;
     MenuItems current_item;
     bool is_editing;
+    int selected_row;
+    int scroll_offset;
     int row_number; // current column position within row (0 = first column, 1 = second column for ChannelItem)
 
     void render(void);

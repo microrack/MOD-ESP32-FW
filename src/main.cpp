@@ -12,6 +12,8 @@
 #include "oscilloscope/oscilloscope.h"
 #include "midi/midi.h"
 #include "midi/midi_settings_state.h"
+#include "midi/ble_midi.h"
+#include "midi/usb_midi.h"
 #include "signal_processor/signal_processor.h"
 #include "screen_switcher.h"
 #include "testmode.h"
@@ -74,6 +76,16 @@ void setup() {
     midi_settings_state.begin();
     signal_processor.begin();
 
+    // Initialize BLE and USB MIDI
+    ble_midi.begin(&signal_processor);
+    usb_midi.begin(&signal_processor);
+    
+    // Restore BLE/USB MIDI state from settings
+    if (midi_settings_state.get_bluetooth_enabled()) {
+        ble_midi.enable();
+    }
+    usb_midi.enable();
+
     // Check for test mode
     nvs_handle_t nvs_handle;
     err = nvs_open("testmode", NVS_READWRITE, &nvs_handle);
@@ -132,6 +144,9 @@ void loop() {
 
     // Update current screen
     screen_switcher.update(&event);
+    
+    // Update USB MIDI (process incoming messages)
+    usb_midi.update();
 
     // Event::print(event);
 }

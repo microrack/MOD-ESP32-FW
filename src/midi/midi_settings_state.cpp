@@ -80,6 +80,13 @@ esp_err_t MidiSettingsState::store_nvs(void) {
         return err;
     }
 
+    err = nvs_set_u8(nvs_handle, "bt_enabled", (uint8_t)bluetooth_enabled);
+    if (err != ESP_OK) {
+        Serial.printf("store_nvs: failed to set bt_enabled, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+
     err = nvs_commit(nvs_handle);
     if (err != ESP_OK) {
         Serial.printf("store_nvs: failed to commit, err=0x%x\n", err);
@@ -179,6 +186,18 @@ esp_err_t MidiSettingsState::recall_nvs(void) {
         needs_save = true;
     } else {
         Serial.printf("recall_nvs: failed to get midi_clk_type, err=0x%x\n", err);
+        nvs_close(nvs_handle);
+        return err;
+    }
+
+    uint8_t bt_val;
+    err = nvs_get_u8(nvs_handle, "bt_enabled", &bt_val);
+    if (err == ESP_OK) {
+        bluetooth_enabled = (bool)bt_val;
+    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+        needs_save = true;
+    } else {
+        Serial.printf("recall_nvs: failed to get bt_enabled, err=0x%x\n", err);
         nvs_close(nvs_handle);
         return err;
     }
@@ -411,4 +430,25 @@ void MidiSettingsState::set_default(void) {
         midi_out_channel[i] = MidiChannelAll;
     }
     midi_clk_type = MidiClkInt;
+    bluetooth_enabled = false;
+}
+
+void MidiSettingsState::set_bluetooth_enabled(bool enabled) {
+    if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
+        this->bluetooth_enabled = enabled;
+        xSemaphoreGive(state_mutex);
+    }
+}
+
+bool MidiSettingsState::get_bluetooth_enabled(void) {
+    bool result = false;
+    if (xSemaphoreTake(state_mutex, portMAX_DELAY) == pdTRUE) {
+        result = this->bluetooth_enabled;
+        xSemaphoreGive(state_mutex);
+    }
+    return result;
+}
+
+const char* MidiSettingsState::get_bluetooth_enabled_str(void) {
+    return get_bluetooth_enabled() ? "on" : "off";
 }
