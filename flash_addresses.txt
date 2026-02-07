@@ -1,0 +1,13 @@
+type,name,filename,address_hex,address_dec,description
+firmware,combined_firmware,combined_firmware.bin,0x00000000,0,Combined firmware binary - flash from address 0x00000000
+component,boot_app0,boot_app0.bin,0x0000E000,57344,Boot app0 component in combined_firmware.bin
+component,bootloader,bootloader.bin,0x00001000,4096,Bootloader component in combined_firmware.bin
+component,partitions,partitions.bin,0x00008000,32768,Partitions table component in combined_firmware.bin
+component,app0,firmware.bin,0x00010000,65536,Application firmware component in combined_firmware.bin
+data,nvs,nvs.csv,0x00009000,36864,NVS partition data (must be compiled to nvs.bin using nvs_partition_gen.py)
+partition,app0,,0x00010000,65536,Partition: app0
+partition,app1,,0x00150000,1376256,Partition: app1
+partition,coredump,,0x003F0000,4128768,Partition: coredump
+partition,nvs,,0x00009000,36864,Partition: nvs
+partition,otadata,,0x0000E000,57344,Partition: otadata
+partition,spiffs,,0x00290000,2686976,Partition: spiffs
