@@ -265,6 +265,77 @@
         .driver-info a:hover {
             text-decoration: underline;
         }
+
+        .serial-monitor {
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .serial-monitor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .serial-monitor-header h3 {
+            color: #4fc3f7;
+            margin: 0;
+        }
+
+        .serial-monitor-header .monitor-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .serial-monitor-header .monitor-btn {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #555;
+            padding: 4px 12px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .serial-monitor-header .monitor-btn:hover {
+            background: #444;
+        }
+
+        .serial-monitor-header .monitor-btn.active {
+            background: #388e3c;
+            border-color: #4caf50;
+            color: white;
+        }
+
+        .serial-monitor-header select {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #555;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+
+        .serial-output {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 0.85em;
+            color: #00ff41;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -299,9 +370,10 @@
 
         <div class="firmware-info">
             <h3>📦 Firmware Information</h3>
-            <p><strong>File:</strong> firmware.bin</p>
+            <p><strong>File:</strong> Combined firmware (bootloader + partitions + app)</p>
             <p><strong>Size:</strong> <span id="firmwareSize">Loading...</span></p>
-            <p><strong>Type:</strong> <span id="firmwareType">Detecting...</span></p>
+            <p><strong>Flash address:</strong> 0x00000000</p>
+            <p><strong>Status:</strong> <span id="firmwareType">Detecting...</span></p>
         </div>
 
         <div id="deviceInfo" class="device-info">
@@ -334,6 +406,28 @@
 
         <div id="logContainer" class="log-container">
             <div id="logContent"></div>
+        </div>
+
+        <div id="serialMonitor" class="serial-monitor">
+            <div class="serial-monitor-header">
+                <h3>📟 Serial Monitor</h3>
+                <div class="monitor-controls">
+                    <select id="baudRateSelect">
+                        <option value="9600">9600</option>
+                        <option value="19200">19200</option>
+                        <option value="38400">38400</option>
+                        <option value="57600">57600</option>
+                        <option value="74880">74880</option>
+                        <option value="115200" selected>115200</option>
+                        <option value="230400">230400</option>
+                        <option value="460800">460800</option>
+                        <option value="921600">921600</option>
+                    </select>
+                    <button id="monitorBtn" class="monitor-btn">▶ Start</button>
+                    <button id="clearMonitorBtn" class="monitor-btn">🗑 Clear</button>
+                </div>
+            </div>
+            <div id="serialOutput" class="serial-output"></div>
         </div>
     </div>
 
@@ -401,12 +495,21 @@
                 this.firmwareType    = document.getElementById('firmwareType');
                 this.eraseAllCheckbox  = document.getElementById('eraseAllCheckbox');
                 this.resetAfterFlash   = document.getElementById('resetAfterFlash');
+                this.serialMonitor     = document.getElementById('serialMonitor');
+                this.serialOutput      = document.getElementById('serialOutput');
+                this.monitorBtn        = document.getElementById('monitorBtn');
+                this.clearMonitorBtn   = document.getElementById('clearMonitorBtn');
+                this.baudRateSelect    = document.getElementById('baudRateSelect');
             }
 
             setupEventListeners() {
                 this.connectBtn.addEventListener('click', () => this.connectDevice());
                 this.flashBtn.addEventListener('click', () => this.flashFirmware());
                 this.disconnectBtn.addEventListener('click', () => this.disconnectDevice());
+                this.monitorBtn.addEventListener('click', () => this.toggleMonitor());
+                this.clearMonitorBtn.addEventListener('click', () => {
+                    this.serialOutput.textContent = '';
+                });
 
                 // Warn user before closing tab during flash
                 window.addEventListener('beforeunload', (e) => {
@@ -464,15 +567,28 @@
                     const byteLen = this.firmwareData.length;
                     this.firmwareSize.textContent = this.formatBytes(byteLen);
 
-                    // Validate ESP image magic byte
-                    const magic = this.firmwareData.charCodeAt(0);
-                    if (magic === ESP_IMAGE_MAGIC) {
-                        this.firmwareType.textContent = 'Valid ESP image (app binary)';
-                    } else {
-                        this.firmwareType.textContent = '⚠️ Unknown format — may not be a valid ESP image';
+                    // Combined firmware: bootloader sits at 0x1000 inside the binary.
+                    // The ESP image magic byte (0xE9) should appear at that offset.
+                    const bootloaderMagic = this.firmwareData.charCodeAt(0x1000);
+                    if (bootloaderMagic === ESP_IMAGE_MAGIC) {
+                        this.firmwareType.textContent = 'Valid combined firmware image ✓';
                         this.addLogEntry(
-                            `Warning: firmware magic byte is 0x${magic.toString(16).toUpperCase()}, expected 0xE9. ` +
-                            'File may be corrupt or not an ESP image.',
+                            `Firmware loaded: ${this.formatBytes(byteLen)} — ` +
+                            'combined image (bootloader + partitions + app) verified.',
+                            'success'
+                        );
+                    } else if (this.firmwareData.charCodeAt(0) === ESP_IMAGE_MAGIC) {
+                        // Standalone app image — user may have provided firmware.bin instead of combined
+                        this.firmwareType.textContent = '⚠️ Standalone app image detected';
+                        this.addLogEntry(
+                            'Warning: This looks like a standalone app image (not combined). ' +
+                            'Flashing at 0x0 may not work correctly. Use the combined firmware from the release.',
+                            'warning'
+                        );
+                    } else {
+                        this.firmwareType.textContent = '⚠️ Unknown format';
+                        this.addLogEntry(
+                            'Warning: Could not verify firmware image format. File may be corrupt.',
                             'warning'
                         );
                     }
@@ -591,10 +707,8 @@
                         this.addLogEntry('Erase-all enabled — full flash erase before write.', 'warning');
                     }
 
-                    // Use 0x10000 for standard app images; 0x0 if the binary looks
-                    // like a merged/factory image (no ESP_IMAGE_MAGIC at byte 0).
-                    const magic = this.firmwareData.charCodeAt(0);
-                    const flashAddress = (magic === ESP_IMAGE_MAGIC) ? 0x10000 : 0x0;
+                    // Combined firmware (bootloader + partitions + app) always starts at 0x0
+                    const flashAddress = 0x0;
                     this.addLogEntry(`Flash address: 0x${flashAddress.toString(16).toUpperCase()}`, 'info');
 
                     const flashOptions = {
@@ -626,6 +740,16 @@
                         } catch (resetErr) {
                             this.addLogEntry(`Reset failed (non-critical): ${resetErr.message}`, 'warning');
                         }
+
+                        // Auto-start serial monitor after flash + reset
+                        this.addLogEntry('Starting serial monitor...', 'info');
+                        // Tear down the esptool transport so we can reopen the port cleanly
+                        try { await this.transport.disconnect(); } catch(_) {}
+                        this.transport = null;
+                        this.loader = null;
+                        // Small delay to let the port settle after reset
+                        await new Promise(r => setTimeout(r, 500));
+                        await this.startMonitor();
                     }
 
                 } catch (error) {
@@ -651,6 +775,8 @@
             }
 
             async cleanupConnection() {
+                // Stop serial monitor if running
+                await this.stopMonitor();
                 // Always prefer transport.disconnect() — it handles port cleanup.
                 if (this.transport) {
                     try {
@@ -663,6 +789,107 @@
                 this.transport = null;
                 this.port = null;
                 this.loader = null;
+            }
+
+            // ------- Serial Monitor -----------------------------------------------
+
+            async toggleMonitor() {
+                if (this.monitorReader) {
+                    await this.stopMonitor();
+                } else {
+                    await this.startMonitor();
+                }
+            }
+
+            async startMonitor() {
+                if (this.monitorReader) return; // Already running
+
+                try {
+                    // If port isn't set (e.g. user disconnected), re-request
+                    if (!this.port) {
+                        this.port = await navigator.serial.requestPort({ filters: USB_FILTERS });
+                    }
+
+                    const baudRate = parseInt(this.baudRateSelect.value, 10);
+
+                    // Open port if not already open
+                    try {
+                        await this.port.open({ baudRate });
+                    } catch (e) {
+                        // Port might already be open — try closing and reopening
+                        if (e.message.includes('already open') || e.name === 'InvalidStateError') {
+                            try { await this.port.close(); } catch(_) {}
+                            await this.port.open({ baudRate });
+                        } else {
+                            throw e;
+                        }
+                    }
+
+                    this.serialMonitor.style.display = 'block';
+                    this.monitorBtn.textContent = '⏹ Stop';
+                    this.monitorBtn.classList.add('active');
+                    this.addLogEntry(`Serial monitor started at ${baudRate} baud.`, 'success');
+
+                    const decoder = new TextDecoderStream();
+                    this.monitorAbortController = new AbortController();
+                    this.monitorPipeline = this.port.readable.pipeTo(
+                        decoder.writable,
+                        { signal: this.monitorAbortController.signal }
+                    ).catch(() => {}); // Suppress abort errors
+
+                    this.monitorReader = decoder.readable.getReader();
+                    this.readSerialLoop();
+
+                } catch (error) {
+                    this.addLogEntry(`Monitor error: ${error.message}`, 'error');
+                    await this.stopMonitor();
+                }
+            }
+
+            async readSerialLoop() {
+                try {
+                    while (this.monitorReader) {
+                        const { value, done } = await this.monitorReader.read();
+                        if (done) break;
+                        if (value) {
+                            this.serialOutput.textContent += value;
+                            // Auto-scroll
+                            this.serialOutput.scrollTop = this.serialOutput.scrollHeight;
+                            // Cap buffer size to ~50 KB to avoid memory issues
+                            if (this.serialOutput.textContent.length > 50000) {
+                                this.serialOutput.textContent =
+                                    this.serialOutput.textContent.slice(-30000);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    // Reader cancelled — expected on stop
+                    if (error.name !== 'TypeError') {
+                        this.addLogEntry(`Monitor read error: ${error.message}`, 'warning');
+                    }
+                }
+            }
+
+            async stopMonitor() {
+                if (this.monitorReader) {
+                    try { this.monitorReader.cancel(); } catch(_) {}
+                    this.monitorReader = null;
+                }
+                if (this.monitorAbortController) {
+                    this.monitorAbortController.abort();
+                    this.monitorAbortController = null;
+                }
+                try { await this.monitorPipeline; } catch(_) {}
+                this.monitorPipeline = null;
+
+                // Close the port so it can be reused
+                if (this.port) {
+                    try { await this.port.close(); } catch(_) {}
+                }
+
+                this.monitorBtn.textContent = '▶ Start';
+                this.monitorBtn.classList.remove('active');
+                this.addLogEntry('Serial monitor stopped.', 'info');
             }
         }
 
