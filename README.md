@@ -1,6 +1,6 @@
-# URack ESP32 Firmware
+# MICRORACK ESP32 Module Firmware
 
-Firmware for URack module based on ESP32 with MIDI, oscilloscope and other features support.
+Firmware for [MICRORACK module](https://microrack.org/market/products/mod-esp32) based on ESP32 with MIDI, oscilloscope and other features support.
 
 ## Automatic Releases
 
