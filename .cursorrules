@@ -1,0 +1,238 @@
+# Cursor/AI Assistant Rules for MOD-ESP32-FW
+
+## Project Context
+This is firmware for a URack ESP32-based modular synthesizer module with MIDI, oscilloscope, and audio synthesis capabilities.
+
+## Technology Stack
+- **Platform**: ESP32 (dual-core Xtensa LX6)
+- **Framework**: Arduino for ESP32
+- **Build System**: PlatformIO
+- **Language**: C++11/14
+- **Key Libraries**: Mozzi (audio), Sigscoper (oscilloscope), Adafruit (display/NeoPixel)
+
+## Code Style Guidelines
+
+### Naming Conventions
+- **Classes**: PascalCase (e.g., `SignalProcessor`, `MidiSettings`)
+- **Functions/Methods**: snake_case (e.g., `handle_note_on`, `get_inputs`)
+- **Constants**: UPPER_SNAKE_CASE with const (e.g., `SCREEN_WIDTH`, `MIDI_BAUDRATE`)
+- **Enums**: PascalCase types, enum values use prefix (e.g., `OutChannelA`, `EventNoteOn`)
+- **Member variables**: snake_case (e.g., `midi_settings_state`, `note_history`)
+- **Local variables**: snake_case
+
+### File Organization
+- Header files use `#pragma once` (not include guards)
+- Place includes in order: system, libraries, local
+- Keep related functionality in subdirectories (midi/, oscilloscope/, etc.)
+- Header files contain class declarations, cpp files contain implementations
+
+### Hardware-Specific Guidelines
+- Pin definitions go in `board.h`
+- Use named constants for pins, never magic numbers
+- Hardware timing constants should be clearly documented
+- PWM and ADC values should have clear scaling documentation
+
+### MIDI & Audio
+- MIDI channel numbering: 0-based internally, 1-based in UI
+- Note values: 0-127 (MIDI standard), reference is Middle C = 60
+- Audio synthesis uses Mozzi library patterns
+- CV outputs use 1V/octave standard for pitch
+
+### Memory & Performance
+- Prefer stack allocation over heap for small objects
+- Use `const` and `constexpr` where applicable
+- Minimize dynamic memory allocation (embedded constraints)
+- ISR/callback code must be fast and non-blocking
+- IRAM_ATTR for functions called from interrupts if needed
+
+## Architecture Patterns
+
+### Screen System
+All UI screens implement `ScreenInterface`:
+```cpp
+class MyScreen : public ScreenInterface {
+public:
+    void enter() override;   // Called when screen becomes active
+    void exit() override;    // Called when screen is left
+    void update(Event* event) override;  // Called each frame
+};
+```
+
+### Event Handling
+User input flows as Event structs:
+```cpp
+Event event = input_handler.get_inputs();
+// event.encoder: rotation delta
+// event.button_a: ButtonPress/Release/Hold/None
+// event.button_sw: encoder switch state
+```
+
+### MIDI Processing
+MIDI events → SignalProcessor → hardware outputs:
+- Use `handle_note_on()`, `handle_note_off()`, etc.
+- SignalProcessor maintains state (active notes, CV outputs)
+- NoteHistory tracks polyphonic voice allocation
+
+### State Persistence
+- Use ESP32 NVS for persistent settings (MidiSettingsState)
+- Keep NVS writes minimal (flash wear)
+- Initialize defaults if NVS read fails
+
+## Common Patterns
+
+### Adding a New MIDI Feature
+1. Add handler in SignalProcessor class
+2. Update ProcessorEventType enum if needed
+3. Add event callback invocation
+4. Update MidiInfo display if visible to user
+
+### Adding a New Screen
+1. Create class implementing ScreenInterface
+2. Add instance to screens array in main.cpp
+3. Implement enter/exit/update lifecycle
+4. Handle encoder/button events appropriately
+
+### Modifying Display
+- Display is Adafruit_SSD1306, 128x64 pixels
+- Coordinate origin: top-left (0,0)
+- Call `display()` to update after drawing
+- Clear with `clearDisplay()` before redrawing
+
+## Important Constraints
+
+### Hardware Limitations
+- ESP32 ADC: 12-bit (0-4095), non-linear, use calibration if needed
+- PWM: 10-bit resolution (0-1023) at 32768 Hz
+- Display I2C: Can be slow, minimize update frequency
+- MIDI UART: Fixed 31250 baud, no flow control
+
+### Timing Requirements
+- Mozzi control rate: 1024 Hz (0.98ms period)
+- Mozzi audio rate: 32768 Hz (30.5µs period)
+- MIDI clock: 24 ticks per quarter note
+- Display updates: ~60Hz max for smooth UI
+
+### Memory Constraints
+- Minimize global buffers
+- Oscilloscope buffers: 128 samples × 2 channels × 2 bytes = 512 bytes
+- Stack size on ESP32 tasks: configurable but limited
+- Avoid deep recursion
+
+## Testing & Debugging
+
+### Serial Debugging
+- Baud rate: 115200
+- Use `Serial.printf()` for formatted output
+- Debug flags available in board.h (e.g., `DEBUG_MIDI_PROCESSOR`)
+
+### Test Mode
+- Factory test mode in testmode.cpp
+- Activated via NVS flag "testmode"
+- Tests all I/O systematically
+
+### Hardware Testing
+- Use oscilloscope for CV output verification
+- MIDI monitor for MIDI I/O testing
+- Web-based flashing via GitHub Pages
+
+## Build & Deployment
+
+### Local Development
+```bash
+pio run              # Build firmware
+pio run -t upload    # Flash to device
+pio device monitor   # Serial monitor
+```
+
+### Release Process
+- Tag with `vX.Y.Z` format
+- GitHub Actions builds and creates release
+- Web flasher automatically updated
+
+## Code Quality Standards
+
+### Documentation
+- Document complex algorithms with comments
+- Explain hardware-specific magic numbers
+- Add brief class/function descriptions
+- Document units (ms, Hz, MIDI values, CV voltages)
+
+### Error Handling
+- Check return values from ESP-IDF functions
+- Use `ESP_ERROR_CHECK()` for critical operations
+- Gracefully handle NVS read failures (use defaults)
+- Serial logging for debugging
+
+### Comments
+- Prefer clear code over comments when possible
+- Comment "why" not "what" for non-obvious code
+- Document hardware timing requirements
+- Explain calibration constants
+
+## DO's and DON'Ts
+
+### DO:
+- Use existing patterns from codebase
+- Test on hardware before committing
+- Document hardware-specific values
+- Keep UI responsive (non-blocking code)
+- Use const for values that don't change
+- Follow existing code style
+
+### DON'T:
+- Use blocking delays in main loop
+- Allocate large buffers on stack
+- Use floating point in ISRs/callbacks unnecessarily
+- Ignore MIDI timing precision
+- Mix hardware pin numbers with abstract channels
+- Use `String` class (prefer char arrays/const char*)
+
+## AI Assistant Specific Notes
+
+When suggesting code changes:
+1. Maintain consistency with existing naming and style
+2. Consider ESP32 hardware constraints (memory, timing)
+3. Reference ARCHITECTURE.md for system design
+4. Respect real-time audio/MIDI timing requirements
+5. Test critical paths (audio callbacks, MIDI handlers)
+6. Document any hardware-specific assumptions
+7. Consider NVS persistence for new settings
+
+When explaining code:
+1. Clarify MIDI → CV conversion details
+2. Explain timing relationships (Mozzi, MIDI clock)
+3. Reference modular synth concepts (1V/oct, gates, triggers)
+4. Distinguish between internal (0-based) and UI (1-based) indexing
+
+## File-Specific Guidelines
+
+### board.h
+- Central location for pin definitions
+- Hardware constants (frequencies, resolutions)
+- Keep organized by subsystem (MIDI, display, outputs)
+
+### main.cpp
+- Minimal setup/loop, delegate to classes
+- Screen array and switcher initialization
+- Hardware peripheral initialization
+
+### signal_processor/*
+- Real-time audio/CV generation
+- MIDI event → voltage conversion
+- Critical for timing accuracy
+
+### midi/*
+- MIDI protocol handling
+- Settings persistence
+- UI for MIDI configuration
+
+### oscilloscope/*
+- Sigscoper library integration
+- Display modes and time bases
+- Real-time signal visualization
+
+## Resources
+- See ARCHITECTURE.md for detailed system design
+- See README.md for build instructions
+- ESP32 documentation: https://docs.espressif.com/
+- Mozzi library: https://sensorium.github.io/Mozzi/
