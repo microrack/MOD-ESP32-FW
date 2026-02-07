@@ -563,7 +563,7 @@
 
             async loadFirmwareInfo() {
                 try {
-                    this.firmwareData = await this.getImageData('firmware.bin');
+                    this.firmwareData = await this.getImageData('combined_firmware.bin');
                     const byteLen = this.firmwareData.length;
                     this.firmwareSize.textContent = this.formatBytes(byteLen);
 
@@ -735,7 +735,12 @@
                     if (this.resetAfterFlash.checked) {
                         try {
                             this.addLogEntry('Resetting device...', 'info');
-                            await this.loader.hardReset();
+                            // Use transport to toggle DTR/RTS for hard reset
+                            await this.transport.setDTR(false);
+                            await this.transport.setRTS(true);
+                            await new Promise(r => setTimeout(r, 100));
+                            await this.transport.setRTS(false);
+                            await new Promise(r => setTimeout(r, 100));
                             this.addLogEntry('Device reset complete. Firmware is now running.', 'success');
                         } catch (resetErr) {
                             this.addLogEntry(`Reset failed (non-critical): ${resetErr.message}`, 'warning');
@@ -744,11 +749,14 @@
                         // Auto-start serial monitor after flash + reset
                         this.addLogEntry('Starting serial monitor...', 'info');
                         // Tear down the esptool transport so we can reopen the port cleanly
+                        // Save port reference before disconnecting transport
+                        const savedPort = this.port;
                         try { await this.transport.disconnect(); } catch(_) {}
                         this.transport = null;
                         this.loader = null;
-                        // Small delay to let the port settle after reset
-                        await new Promise(r => setTimeout(r, 500));
+                        this.port = savedPort;
+                        // Give the device time to boot before opening serial
+                        await new Promise(r => setTimeout(r, 1500));
                         await this.startMonitor();
                     }
 

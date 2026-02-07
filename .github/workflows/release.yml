@@ -46,7 +46,7 @@ jobs:
         
     - name: Copy firmware to web directory
       run: |
-        cp .pio/build/modesp32v1/combined_firmware.bin web/firmware.bin
+        cp .pio/build/modesp32v1/combined_firmware.bin web/combined_firmware.bin
         cp .pio/build/modesp32v1/flash_addresses.txt web/flash_addresses.txt
         sed -i "s/Version: <span id=\"firmwareVersion\">.*<\/span>/Version: <span id=\"firmwareVersion\">${{ github.ref_name }}<\/span>/" web/index.html
         
