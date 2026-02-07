@@ -21,7 +21,7 @@ git push origin v1.0.0
 
 ## Web Interface for Flashing
 
-Available at: `https://[username].github.io/[repository-name]/`
+Available at: [microrack.org/resources/flasher](https://microrack.org/resources/flasher)
 
 ### GitHub Pages Setup:
 
